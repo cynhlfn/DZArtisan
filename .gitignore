@@ -1,0 +1,6 @@
+env/
+# /.accounts
+userauths/
+
+__pycache__/
+*.pyc

@@ -1,0 +1,149 @@
+
+* {
+    padding: 0px;
+    margin: 0px;
+    box-sizing: border-box;
+    font-family: sans-serif;
+    transition: 1s ease;
+  }
+  
+  body {
+    background-image: linear-gradient(45deg, #113F67, #226597);
+    background-attachment: fixed;
+    background-size: cover;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px;
+  }
+ 
+  .box {
+    position: absolute;
+    width: 350px;
+    height: 500px;
+    background: none;
+    left: calc(50% - 175px);
+    top: calc(50% - 250px);
+    transform-style: preserve-3d;
+
+  }
+
+  
+  
+  
+  .box div {
+    width: 350px;
+    height: 500px;
+    position: absolute;
+    background-image: radial-gradient(#fff, #87C0CD);
+    box-shadow: 0px 0px 5px #226597, 0px 0px 30px #226597,
+      inset 0px 0px 5px #226597, inset 0px 0px 30px #226597;
+    border: 3px solid #4682A9;
+  }
+  
+  .box div:nth-child(5) {
+    height: 350px;
+    box-shadow: 0px 0px 10px #548CA8, 0px 0px 30px #548CA8;
+  }
+  
+  .a {
+    transform: rotateY(0deg) translateZ(175px);
+  }
+  
+  .b {
+    transform: rotateY(90deg) translateZ(175px);
+  }
+  
+  .c {
+    transform: rotateY(180deg) translateZ(175px);
+  }
+  
+  .d {
+    transform: rotateY(270deg) translateZ(175px);
+  }
+  
+  .e {
+    transform: rotateX(-90deg) translateZ(325px);
+  }
+  
+  .a label {
+    position: relative;
+    width: 200px;
+    left: 65px;
+    top: 170px;
+    color: white;
+    font-size: 20px;
+    height: 50px;
+    line-height: 50px;
+    margin: 20px 0px;
+    text-align: center;
+    display: block;
+    background-image: linear-gradient(45deg, #113F67, #ff00c4);
+    border-radius: 25px;
+    box-shadow: 0px 0px 5px #226597, 0px 0px 30px #226597;
+    cursor: pointer;
+  }
+  
+  #sup,
+  #btn {
+    background-image: linear-gradient(45deg, #ff00c4, #113F67);
+    color: white;
+    cursor: pointer;
+  }
+  
+  #btn:focus {
+    width: calc(100% - 80px);
+    left: 40px;
+  }
+  
+  .title {
+  
+    width: 100%;
+   text-align: center;
+   line-height: 30px;
+   font-size: 30px;
+   font-weight: bold;
+   color: #8d006c;
+   text-shadow: 0px 0px 20px #226597;
+   position: absolute;
+    
+  }
+  
+  .frm input{
+    position: relative;
+    width: calc(100% - 80px);
+    left: 40px;
+    display: block;
+    text-align: center;
+    line-height: 40px; 
+    top: 60px;
+    background: none;
+    outline: none;
+    border: none;
+    border-radius: 25px;
+    box-shadow: 0px 0px 5px #226597, 0px 0px 30px #F6F4EB;
+    margin: 20px 0px;
+    font-size: 16px;
+    }
+  
+  .frm input:focus {
+      width: calc(100% - 40px);
+      left: 20px;
+      background: #ffcbf9;
+      box-shadow: 0px 0px 5px #000, 0px 0px 30px #c900b2;
+       }
+      
+     #btm{
+      position: absolute;
+      bottom: 20px;
+      font-size: 20px;
+      color: #548CA8;
+      text-align: center;
+      width: 100%;
+      cursor: pointer;
+      }
+      
+
+      #chk1:checked ~ .box{transform: rotateY(-180deg);}
+      #chk2:checked ~ .box{transform: rotateY(-90deg);}

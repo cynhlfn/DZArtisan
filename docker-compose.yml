@@ -1,0 +1,47 @@
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/projetGLBDD
+    working_dir: /projetGLBDD
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=BackendProjetGLBDD.settings
+      - DATABASE_URL=${DATABASE_URL}
+      # - POSTGRES_USER=postgres
+      # - POSTGRES_PASSWORD=modulora2d
+      # - POSTGRES_DB=DzArtisanProjet
+      - HTTP_PROXY=""
+      - HTTPS_PROXY=""
+      - http_proxy=""
+      - https_proxy=""
+    # depends_on:
+    #   - db
+  # db:
+  #   image: postgres:13
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: modulora2d
+  #     POSTGRES_DB: DzArtisanProjet
+  test:
+    build: .
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        pytest accounts/tests/"
+    environment:
+      - DJANGO_SETTINGS_MODULE=BackendProjetGLBDD.settings
+      - DATABASE_URL=${DATABASE_URL}
+      # - POSTGRES_USER=postgres
+      # - POSTGRES_PASSWORD=modulora2d
+      # - POSTGRES_DB=DzArtisanProjet
+    # depends_on:
+    #   - db
+# volumes:
+#   postgres_data:

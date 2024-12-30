@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Water Drop Login Page</title>
+  <link rel="stylesheet" href="{% static 'css/hasna.css'%}">
+</head>
+
+<body>
+
+
+  
+    <input type="radio" id="chk1" name="a1" style="display: none;">
+    <input type="radio" id="chk2" name="a1" style="display: none;">
+    <div class="box">
+      {% load socialaccount %}
+      
+      
+      
+      <div class="a">
+        
+        <label for="chk1">Login</label>
+        
+        <label for="chk2" id="sup">Sign up</label>
+        
+
+
+
+      </div>
+
+      <div class="b">
+
+        <form action="{% url 'userauths:sign-up' %}" method="post" class="frm">
+
+          <h6 class="title">SIGN-UP FORM</h6>
+
+          {% comment %} <input type="text" placeholder="Enter Full Name">
+
+          <input type="text" placeholder="Enter Username">
+
+          <input type="text" placeholder="Enter Email Address">
+
+          <input type="text" placeholder="Enter Passwprd">
+
+          <input type="text" placeholder="Confirm Password"> {% endcomment %}
+          {% csrf_token %}
+          {{ form.full_name }}
+          {{ form.username }}
+          {{ form.email }}
+          {{ form.password1 }}
+          {{ form.password2 }}
+
+          <input type="submit" value="Sign up" name="register" id="btn">
+
+
+          <label for="chk1" id="btm">Login here</label>
+        </form>
+
+      </div>
+      <div class="c">
+        <form action="{% url 'userauths:sign-in' %}" method="post" class="frm">
+          <br><br><br><br><br><br>
+          {% csrf_token %}
+
+          <h6 class="title">LOGIN FORM</h6>
+
+
+          <input class="input-text" type="email" name="email"  placeholder="Email Address" />
+
+
+
+          <input class="input-text form-control " type="password" name="password"  placeholder="Password" />
+
+          <input type="submit" value="Login" id="btn">
+
+          <label for="chk2" id="btm">signup here</label>
+        </form>
+
+      </div>
+
+      <div class="d"></div>
+      <div class="e"></div>
+    </div>
+  
+</body>
+
+</html>
