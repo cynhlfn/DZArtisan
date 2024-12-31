@@ -226,7 +226,7 @@ TEMPLATES = [
 #     "https://devnoms.onrender.com",
 #     "https://django-chat-application.onrender.com",
 # ]
-# CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 # CSRF_TRUSTED_ORIGINS = [
 #     "https://devnoms.onrender.com",
