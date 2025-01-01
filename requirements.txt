@@ -87,3 +87,5 @@ tzdata==2024.2
 zope.interface==7.2
 
 channels
+
+cloudinary

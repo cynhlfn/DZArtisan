@@ -21,7 +21,23 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 import json
 
+from datetime import datetime
+from django.utils.timezone import now  # Ensures compatibility with timezone-aware databases
+
+import cloudinary.uploader
+
+import cloudinary
+
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
+
+
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +55,7 @@ def get_db_connection():
         return connection
     except Exception as e:
         raise Exception(f"erreur de connection a la base de donnée: {str(e)}")
+    
 @csrf_exempt
 def artisan_signup(request):
     if request.method == "POST":
@@ -63,7 +80,7 @@ def artisan_signup(request):
             phone_number = data.get("phone_number", None)  # Optional
             is_certified = data.get("is_certified", False)
             is_assured = data.get("is_assured", False)
-            job = data.get("job")
+            job_name = data.get("job")
 
             # Files must be handled separately (Postman will send files as multipart form-data)
             certification_files = request.FILES.getlist("certification_files") if is_certified else []
@@ -93,6 +110,17 @@ def artisan_signup(request):
                     with connection.cursor() as cursor:
                         # Check email uniqueness
                         cursor.execute(
+                            "SELECT idMetier FROM metier WHERE Nmetier = %s",
+                            [job_name]
+                        )
+
+                        metier_row = cursor.fetchone()
+                        if not metier_row:
+                            return JsonResponse({"success": False, "message": "Le métier spécifié est invalide."}, status=400)
+                        
+                        id_metier = metier_row[0]
+
+                        cursor.execute(
                             "SELECT id FROM auth_user WHERE email = %s",
                             [email]
                         )
@@ -100,13 +128,14 @@ def artisan_signup(request):
                             return JsonResponse({"success": False, "message": "Cet email est déjà utilisé."}, status=400)
 
                         # Insert artisan data into auth_user table
+                        
                         cursor.execute(
                             """
-                            INSERT INTO auth_user (username, first_name, last_name, email, password, phoneNumber, isCertified, isAssured, is_staff, job)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                            INSERT INTO auth_user (username, first_name, last_name, email, password, phoneNumber, isCertified, isAssured, is_staff, idMetier)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
                             RETURNING id
                             """,
-                            [email, first_name, last_name, email, hashed_password, phone_number, is_certified, is_assured, job]
+                            [email, first_name, last_name, email, hashed_password, phone_number, is_certified, is_assured, id_metier]
                         )
                         artisan_id = cursor.fetchone()[0]
 
@@ -340,8 +369,15 @@ def user_login(request):
                     # Validate password
                     if not check_password(password, db_password):
                         return JsonResponse({"success": False, "message": "Le mot de passe est incorrect."}, status=400)
+                    
+                    # Update last_login timestamp
+                    cursor.execute(
+                        "UPDATE auth_user SET last_login = %s WHERE id = %s",
+                        [now(), user_id]
+                    )
 
             finally:
+                connection.commit()
                 connection.close()
 
             # Log the user in by creating a custom user-like object
@@ -351,6 +387,7 @@ def user_login(request):
             request.session['is_authenticated'] = True
             request.session['is_superuser'] = is_superuser
             request.session['is_staff'] = is_staff
+
 
             role = "admin" if is_superuser else "artisan" if is_staff else "client"
 
@@ -474,32 +511,64 @@ def validate_artisan(request, artisan_id):
 #     return JsonResponse({"success":False, "message":"Méthode non autorisée."}, status=405)
 
 def save_files(files, artisan_id, table_name, connection):
-    # """
-    # Save files to the database and file system.
-    # :param files: List of uploaded files
-    # :param artisan_id: ID of the artisan
-    # :param table_name: Name of the table to save data into ('certificat' or 'assurance')
-    # :param connection: Active database connection
-    # """
-    upload_path = os.path.join(settings.MEDIA_ROOT, table_name)
-    os.makedirs(upload_path, exist_ok=True)
-
+    """
+    Save files to Cloudinary and store their URLs in the database.
+    :param files: List of uploaded files
+    :param artisan_id: ID of the artisan
+    :param table_name: Name of the table to save data into ('certificat' or 'assurance')
+    :param connection: Active database connection
+    """
     with connection.cursor() as cursor:
         for file in files:
-            fs = FileSystemStorage(location=upload_path)
-            filename = fs.save(file.name, file)
-            file_path = os.path.join(upload_path, filename)
+            # Upload file to Cloudinary
+            try:
+                upload_result = cloudinary.uploader.upload(file)
+                file_url = upload_result['secure_url']  # Get the URL of the uploaded file
 
-            column_name = "assurance" if table_name == "assurance" else "certificat_joint"
+                # Determine the column name based on the table
+                column_name = "assurance" if table_name == "assurance" else "certificat_joint"
 
-            # Save file path to the appropriate table
-            cursor.execute(
-                f"""
-                INSERT INTO {table_name} (id, {column_name})
-                VALUES (%s, %s)
-                """,
-                [artisan_id, file_path]
-            )
+                # Save file URL to the appropriate table
+                cursor.execute(
+                    f"""
+                    INSERT INTO {table_name} (id_user, {column_name})
+                    VALUES (%s, %s)
+                    """,
+                    [artisan_id, file_url]
+                )
+            except Exception as e:
+                print(f"Error uploading file to Cloudinary: {str(e)}")
+                raise
+
+#############version pdf
+# def save_files(files, artisan_id, table_name, connection):
+#     # """
+#     # Save files to the database and file system.
+#     # :param files: List of uploaded files
+#     # :param artisan_id: ID of the artisan
+#     # :param table_name: Name of the table to save data into ('certificat' or 'assurance')
+#     # :param connection: Active database connection
+#     # """
+#     upload_path = os.path.join(settings.MEDIA_ROOT, table_name)
+#     os.makedirs(upload_path, exist_ok=True)
+
+#     with connection.cursor() as cursor:
+#         for file in files:
+#             fs = FileSystemStorage(location=upload_path)
+#             filename = fs.save(file.name, file)
+#             file_path = os.path.join(upload_path, filename)
+
+#             column_name = "assurance" if table_name == "assurance" else "certificat_joint"
+
+#             # Save file path to the appropriate table
+#             cursor.execute(
+#                 f"""
+#                 INSERT INTO {table_name} (id, {column_name})
+#                 VALUES (%s, %s)
+#                 """,
+#                 [artisan_id, file_path]
+#             )
+#############################
 @csrf_exempt
 def EditProfile(request):
     connection = get_db_connection()
@@ -587,16 +656,128 @@ def EditProfile(request):
     return JsonResponse(response_data)
 
 
+@csrf_exempt
+def email_taken(request):
+    if request.method == "POST":
+        try:
+            if not request.body:
+                return JsonResponse({"success": False, "message":"le corps de la requête est vide."}, status=400)
+            
+            if request.content_type == "application/json":
+                data = json.loads(request.body.decode("utf-8"))
+            else:
+                data = request.POST.dict()
+
+            email = data.get("email")
+
+            connection = get_db_connection()
+            try:
+                with transaction.atomic():
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "SELECT id FROM auth_user WHERE email = %s",
+                            [email]
+                        )
+                        if cursor.fetchone():
+                            is_used = True
+                        else:
+                            is_used = False
+                        
+                return JsonResponse({"is_used": is_used}, status=201)
+            finally:
+                connection.close()
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
 
 
+# @csrf_exempt
+# def admin_demandes(request, id_dem):
+#     if not request.session.get('is_authenticated'):
+#         return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
+
+#     # Check if the user is a superuser
+#     if not request.session.get('is_superuser', False):
+#         return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
+
+#     if request.method == "GET":
+#         try:
+#             if id_dem:
+#                 connection = get_db_connection()
+#                 try:
+#                     with connection.cursor() as cursor:
+#                         cursor.execute(
+#                             "SELECT id , first_name , last_name , is_certified , is_certified , is_assured, idMetier FROM auth_user WHERE id = %s",
+#                                 [id_dem]
+#                         )  
+#                         user_row = cursor.fetchone()
+
+#                         if not user_row:
+#                             return JsonResponse ({"success": False, "message":"pas de demande avec cet id"}, status=404)
+                        
+#                         (
+#                             user_id, first_name, last_name, is_certified, is_assured, idMetier
+#                         ) = user_row
+
+#                         cursor.execute(
+#                             " SELECT Nmetier FROM  metier WHERE idMetier = %s ", [idMetier]
+#                         )
+
+#                         job = cursor.fetchone()
+
+#                         if not job:
+#                             return JsonResponse({"success": False, "message": "le metier n'a pas été trouver"}, status=404)
+                        
+                        
+#                         cursor.execute(
+#                             " SELECT assurance FROM  assurance WHERE id_user = %s ", [user_id]
+#                         )
+
+#                         assurance_files = cursor.fetchall()
 
 
+#                         if not assurance_files:
+#                             # If no assurance files are found
+#                             assurance_files = []
+                        
+                        
+#                         assurance_files_list = [row[0] for row in assurance_files]
+                        
+#                         cursor.execute(
+#                             " SELECT certificat_joint FROM  certificat WHERE id_user = %s ", [user_id]
+#                         )
+
+#                         certificate_files = cursor.fetchall()
 
 
+#                         if not certificate_files:
+#                             # If no assurance files are found
+#                             assurance_files = []
+                        
+                        
+#                         certificate_files_list = [row[0] for row in certificate_files]
+                    
+#                         response_data = {
+#                             "id": user_id,
+#                             "first_name": first_name,
+#                             "last_name": last_name,
+#                             "is_certified": is_certified,
+#                             "is_assured": is_assured,
+#                             "job": job[0],
+#                             "assurance_files": assurance_files_list,
+#                             "certificat_files": certificate_files_list,
+#                         }
 
+#                     return JsonResponse({"success": True, "data": response_data}, status=200)
+#                 finally:
+#                     connection.close()
 
-
+#         except Exception as e:
+#             return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+    
+#     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
 
 

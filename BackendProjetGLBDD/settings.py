@@ -190,9 +190,11 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
+SESSION_COOKIE_NAME = 'sessionid'  # Default session cookie name
 
-SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds (default)
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # False by default; session persists after browser close
+
+SESSION_COOKIE_AGE = 300  # 2 weeks in seconds (default)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # False by default; session persists after browser close
 
 
 # Static files (CSS, JavaScript, Images)
