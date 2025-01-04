@@ -7,9 +7,9 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.views.decorators.csrf import csrf_exempt
 import json
-
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.decorators import login_required
-
+from math import ceil
 from django.contrib.auth import authenticate, login, logout
 
 from django.contrib.auth.models import User
@@ -21,7 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils.timezone import now  # Ensures compatibility with timezone-aware databases
 
 import cloudinary.uploader
@@ -239,91 +239,6 @@ def client_signup(request):
 
     # If not POST, return error
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
-# @csrf_exempt
-# def artisan_login(request):
-#     if request.user.is_authenticated:
-#         return JsonResponse({"success": False, "message": "Vous êtes déjà connecté."}, status=200)
-
-#     if request.method == "POST":
-#         try:
-#             # Parse JSON payload
-#             if not request.body:
-#                 return JsonResponse({"success": False, "message": "Le corps de la requête est vide."}, status=400)
-
-#             if request.content_type == "application/json":
-#                 data = json.loads(request.body.decode("utf-8"))
-#             else:
-#                 data = request.POST.dict()  # Use form data instead
-
-#             # Extract email/username and password
-#             email_or_username = data.get("email_or_username")
-#             passw = data.get("password")
-
-#             # Validate input
-#             if not email_or_username or not passw:
-#                 return JsonResponse({"success": False, "message": "L'email/username et le mot de passe sont requis."}, status=400)
-
-#             # Database connection
-#             connection = get_db_connection()
-
-#             try:
-#                 with connection.cursor() as cursor:
-#                     # Query user by email or username
-#                     cursor.execute(
-#                         "SELECT id, username, email, password, is_validated FROM auth_user WHERE email = %s OR username = %s",
-#                         [email_or_username, email_or_username]
-#                     )
-#                     user_row = cursor.fetchone()
-
-#                     if not user_row:
-#                         return JsonResponse({"success": False, "message": "L'utilisateur est introuvable. Veuillez vérifier votre email/username."}, status=404)
-                    
-#                     user = User(
-#                         id= user_row[0],
-#                         username= user_row[1],
-#                         email= user_row[2],
-#                         password= user_row[3],
-#                         is_validated= user_row[4],
-#                     )
-#                     # Extract user data
-# ###############
-#                     user_id, username, email, db_password, is_validated = user_row
-# #################
-#                     # Check if user is active
-#                     # if not is_validated:
-#                     #     return JsonResponse({"success": False, "message": "Votre compte est désactivé. Contactez l'administrateur."}, status=403)
-
-#                     # Validate password
-#                     user.backend = 'django.contrib.auth.backends.ModelBackend'
-#                     if not check_password(passw, db_password):
-#                         return JsonResponse({"success": False, "message": "Le mot de passe est incorrect."}, status=400)
-
-#                     authenticated_user = authenticate(request, username=user.username, password=passw)
-#                     if authenticated_user is not None:
-#                         login(request, authenticated_user)  # Ensure the session is established
-#                         return JsonResponse({"success": True, "message": "Vous avez été connecté avec succès."}, status=200)
-#                     else:
-#                         return JsonResponse({"success": False, "message": "Échec de l'authentification."}, status=401)
-#             finally:
-#                 connection.close()
-
-#             # Log the user in
-#             # user = authenticate(request, username=username, password=password)
-
-#             # Ensure the user is logged in after authenticating
-
-#             # if user is None:
-#             #     # Manually authenticate and login user (since we don't use ORM)
-#             #     user = User(username=username, email=email, id=user_id)
-#             #     login(request, user)
-            
-#             # login(request, user)
-#             # return JsonResponse({"success": True, "message": "Vous avez été connecté avec succès."}, status=200)
-
-#         except Exception as e:
-#             return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
-
-#     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
 @csrf_exempt
 def user_login(request):
@@ -480,36 +395,6 @@ def validate_artisan(request, artisan_id):
 
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
-
-##########the function I had problems with
-# @csrf_exempt    
-# @login_required
-# def validate_artisan(request, artisan_id):
-#     if not request.user.is_superuser:
-#         return JsonResponse({"success":False, "message":"Vous n'avais pas les droits nécessaires pour valider cet artisan."}, status=403)
-    
-#     if request.method == "POST":
-#         try:
-#             connection = get_db_connection()
-#             try:
-#                 with connection.cursor() as cursor:
-#                     cursor.execute(
-#                         """
-#                         UPDATE auth_user 
-#                         SET is_validated = TRUE
-#                         WHERE id = %s AND is_validated = FALSE
-#                         """,
-#                         [artisan_id]
-#                     )
-#                     if cursor.rowcount == 0:
-#                         return JsonResponse({"success":False, "message":"Aucun artisan trouvé ou déja validé."}, status=404)
-#                 return JsonResponse({"success": True,"message":"l'artisan a été validé avec succès."}, status=200)
-#             finally:
-#                 connection.close()
-#         except Exception as e:
-#             return JsonResponse({"success":False, "message":f"Une erreur s'est produite: {str(e)}"},status=500) 
-#     return JsonResponse({"success":False, "message":"Méthode non autorisée."}, status=405)
-
 def save_files(files, artisan_id, table_name, connection):
     """
     Save files to Cloudinary and store their URLs in the database.
@@ -540,35 +425,6 @@ def save_files(files, artisan_id, table_name, connection):
                 print(f"Error uploading file to Cloudinary: {str(e)}")
                 raise
 
-#############version pdf
-# def save_files(files, artisan_id, table_name, connection):
-#     # """
-#     # Save files to the database and file system.
-#     # :param files: List of uploaded files
-#     # :param artisan_id: ID of the artisan
-#     # :param table_name: Name of the table to save data into ('certificat' or 'assurance')
-#     # :param connection: Active database connection
-#     # """
-#     upload_path = os.path.join(settings.MEDIA_ROOT, table_name)
-#     os.makedirs(upload_path, exist_ok=True)
-
-#     with connection.cursor() as cursor:
-#         for file in files:
-#             fs = FileSystemStorage(location=upload_path)
-#             filename = fs.save(file.name, file)
-#             file_path = os.path.join(upload_path, filename)
-
-#             column_name = "assurance" if table_name == "assurance" else "certificat_joint"
-
-#             # Save file path to the appropriate table
-#             cursor.execute(
-#                 f"""
-#                 INSERT INTO {table_name} (id, {column_name})
-#                 VALUES (%s, %s)
-#                 """,
-#                 [artisan_id, file_path]
-#             )
-#############################
 @csrf_exempt
 def EditProfile(request):
     connection = get_db_connection()
@@ -691,274 +547,420 @@ def email_taken(request):
 
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
-
-
-# @csrf_exempt
-# def admin_demandes(request, id_dem):
-#     if not request.session.get('is_authenticated'):
-#         return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-#     # Check if the user is a superuser
-#     if not request.session.get('is_superuser', False):
-#         return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
-
-#     if request.method == "GET":
-#         try:
-#             if id_dem:
-#                 connection = get_db_connection()
-#                 try:
-#                     with connection.cursor() as cursor:
-#                         cursor.execute(
-#                             "SELECT id , first_name , last_name , is_certified , is_certified , is_assured, idMetier FROM auth_user WHERE id = %s",
-#                                 [id_dem]
-#                         )  
-#                         user_row = cursor.fetchone()
-
-#                         if not user_row:
-#                             return JsonResponse ({"success": False, "message":"pas de demande avec cet id"}, status=404)
-                        
-#                         (
-#                             user_id, first_name, last_name, is_certified, is_assured, idMetier
-#                         ) = user_row
-
-#                         cursor.execute(
-#                             " SELECT Nmetier FROM  metier WHERE idMetier = %s ", [idMetier]
-#                         )
-
-#                         job = cursor.fetchone()
-
-#                         if not job:
-#                             return JsonResponse({"success": False, "message": "le metier n'a pas été trouver"}, status=404)
-                        
-                        
-#                         cursor.execute(
-#                             " SELECT assurance FROM  assurance WHERE id_user = %s ", [user_id]
-#                         )
-
-#                         assurance_files = cursor.fetchall()
-
-
-#                         if not assurance_files:
-#                             # If no assurance files are found
-#                             assurance_files = []
-                        
-                        
-#                         assurance_files_list = [row[0] for row in assurance_files]
-                        
-#                         cursor.execute(
-#                             " SELECT certificat_joint FROM  certificat WHERE id_user = %s ", [user_id]
-#                         )
-
-#                         certificate_files = cursor.fetchall()
-
-
-#                         if not certificate_files:
-#                             # If no assurance files are found
-#                             assurance_files = []
-                        
-                        
-#                         certificate_files_list = [row[0] for row in certificate_files]
-                    
-#                         response_data = {
-#                             "id": user_id,
-#                             "first_name": first_name,
-#                             "last_name": last_name,
-#                             "is_certified": is_certified,
-#                             "is_assured": is_assured,
-#                             "job": job[0],
-#                             "assurance_files": assurance_files_list,
-#                             "certificat_files": certificate_files_list,
-#                         }
-
-#                     return JsonResponse({"success": True, "data": response_data}, status=200)
-#                 finally:
-#                     connection.close()
-
-#         except Exception as e:
-#             return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
-    
-#     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
-
-
-
-
-
-
-# # Function to establish a connection to the Neon PostgreSQL database
-# def get_db_connection():
-#     try:
-#         connection = psycopg2.connect(
-#             host=settings.DATABASES['default']['HOST'],
-#             user=settings.DATABASES['default']['USER'],
-#             password=settings.DATABASES['default']['PASSWORD'],
-#             database=settings.DATABASES['default']['NAME'],
-#             sslmode='require'  # Ensures SSL connection to Neon database
-#         )
-#         return connection
-#     except Exception as e:
-#         return JsonResponse({"error": f"Database connection error: {str(e)}"}, status=500)
-
-
-# @api_view(['POST'])
-# def creation_utilisateur_pro(request):
-#     if request.method == 'POST':
-#         email = request.data.get('email')
-#         password = request.data.get('password')
-#         first_name = request.data.get('firstName', '')  # First name
-#         last_name = request.data.get('lastName', '')    # Last name
-#         phone_number = request.data.get('phoneNumber', '')  # Phone number
-#         bio = request.data.get('bio', '')  # Bio (optional)
-#         pfp = request.data.get('pfp', '')  # Profile picture (optional)
-#         # certificate = request.data.get('certificate', '')  # Profile picture (optional)
-#         # assurance = request.data.get('assurance', '')  # Profile picture (optional)
-
-#         if not email or not password:
-#             return JsonResponse({"error": "Email and password are required."}, status=400)
-
-#         try:
-#             connection = get_db_connection()
-#             cursor = connection.cursor()
-
-#             # Check if the user already exists
-#             cursor.execute("SELECT * FROM \"User\" WHERE email = %s", (email,))
-#             existing_user = cursor.fetchone()
-
-#             if existing_user:
-#                 return JsonResponse({"error": "Email is already in use."}, status=400)
-
-#             # Hash the password before storing it
-#             hashed_password = make_password(password)
-
-#             # Insert a new user into the database
-#             cursor.execute(
-#                 """
-#                 INSERT INTO "User" (firstName, lastName, email, phoneNumber, pfp, bio, isEmailVerified, isAdmin, password_hash)
-#                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-#                 """,
-#                 (first_name, last_name, email, phone_number, pfp, bio, False, False, hashed_password)
-#             )
-
-#             # Commit the transaction
-#             connection.commit()
-
-#         except Exception as e:
-#             return JsonResponse({"error": f"Error: {str(e)}"}, status=500)
-
-#         finally:
-#             cursor.close()
-#             connection.close()
-
-#         return JsonResponse({"message": "User created successfully."}, status=201)
-
-
-# @api_view(['POST'])
-# def login_user(request):
-#     if request.method == 'POST':
-#         email = request.data.get('email')
-#         password = request.data.get('password')
-
-#         if not email or not password:
-#             return JsonResponse({"error": "Email and password are required."}, status=400)
-#         else:
-
-#             try:
-#                 connection = get_db_connection()
-#                 cursor = connection.cursor()
-
-#                 # Check if the user exists
-#                 cursor.execute("SELECT password_hash FROM \"User\" WHERE email = %s", (email,))
-#                 user = cursor.fetchone()
-
-#                 if user and check_password(password, user[0]):
-#                     return JsonResponse({"message": "Login successful."}, status=200)
-#                 else:
-#                     return JsonResponse({"error": "Invalid email or password."}, status=400)
-
-#             except Exception as e:
-#                 return JsonResponse({"error": f"Error: {str(e)}"}, status=500)
-
-#             finally:
-#                 cursor.close()
-#                 connection.close()
-
-
-# @api_view(['GET'])
-# def search_user(request):
-#     first_name = request.query_params.get('first_name', None)
-#     if not first_name:
-#         return JsonResponse({'error': 'First name is required.'}, status=400)
-#     else:
-#         try:
-#             connection = get_db_connection()
-#             cursor = connection.cursor()
-
-#             # Perform the search query
-#             cursor.execute("SELECT * FROM \"User\" WHERE firstName = %s", (first_name.strip().lower(),))
-#             user_data = cursor.fetchall()
-
-#             cursor.close()
-#             connection.close()
-
-#             if not user_data:
-#                 return JsonResponse({'message': 'User not found.'}, status=404)
-
-#             users = [
-#                 {'id': row[0], 'first_name': row[1], 'last_name': row[2], 'email': row[3]}
-#                 for row in user_data
-#             ]
-
-#             return JsonResponse(users, safe=False)
-
-#         except Exception as e:
-#             return JsonResponse({"error": f"Error: {str(e)}"}, status=500)
-
-
-
-
-
-
-# @api_view(['POST'])
-# def demandeDeDevis(request):
-#     if request.method == 'POST':
-#         title = request.data.get('title') 
-#         discription = request.data.get('discription')
-#         timeToBeDone = request.data.get('timeToBeDone')
-#         job_type = request.data.get('job_type')
-
-#         if not title or not discription or not job_type:
-#             return JsonResponse({'error': 'le titre, description et metier son requis .'}, status=400)
-#         else:
-#             try:
-#                 connection = get_db_connection()
-#                 cursor = connection.cursor()
-
-#                 cursor.execute(
-#                     """ 
-#                     INSERT INTO "demandeDeDevis" (title, discription, timeToBeDone)
-#                     VALUES (%s, %s, %s)
-#                     """,
-#                     (title, discription, timeToBeDone)
-#                 )
-#             except Exception as e:
-#                 return JsonResponse({'error': f"Error: {str(e)}"}, status=500)
-#             finally:
-#                 cursor.close()
-#                 connection.close()
-
-# @api_view(['GET'])
-# def getMesDemande(request):
-    
-
-
-##### voire les demandes de devis envoyer (coté artisant)
-
-##### repondre a une demande de devis (artisant)
-
-##### voire les reponse dans l'ordre (client)
-
-##### voire l'avancement des taches
-
-
-
-
-
+ # Ensure only superusers can access
+def admin_dashboard(request):
+    # Bypass for testing purposes
+    if not request.user.is_authenticated:
+        #logger.warning("Bypassing authentication for testing purposes.")
+        #from django.contrib.auth.models import User
+        #request.user = User.objects.get(username="admin@example.com")
+        return JsonResponse({"error": "You must be logged in to perform this action."}, status=403)      
+
+    try:
+        connection = get_db_connection()  # Use your custom database connection
+        try:
+            with connection.cursor() as cursor:
+                # Total Clients
+                cursor.execute(
+                    "SELECT COUNT(*) FROM auth_user WHERE is_staff = FALSE AND is_superuser = FALSE"
+                )
+                total_clients = cursor.fetchone()[0]
+
+                # Total Artisans
+                cursor.execute(
+                    "SELECT COUNT(*) FROM auth_user WHERE is_staff = TRUE AND is_superuser = FALSE"
+                )
+                total_artisans = cursor.fetchone()[0]
+
+                # Total Deals
+                cursor.execute(
+                    "SELECT COUNT(*) FROM demande_de_devis"
+                )
+                total_deals = cursor.fetchone()[0]
+
+                # Percentage Calculations
+                total_users = total_clients + total_artisans
+                artisan_percentage = (
+                    (total_artisans / total_users) * 100 if total_users > 0 else 0
+                )
+                client_percentage = (
+                    (total_clients / total_users) * 100 if total_users > 0 else 0
+                )
+
+                # Recent Undone Tasks (Last 5)
+                cursor.execute(
+                    """
+                    SELECT idTache, titre, description 
+                    FROM tache_admin 
+                    WHERE etat != 'fait' 
+                    ORDER BY idTache DESC 
+                    LIMIT 5
+                    """
+                )
+                recent_taches = [
+                    {"id": str(row[0]), "title": row[1], "description": row[2]}
+                    for row in cursor.fetchall()
+                ]
+
+                # Recent Demands with is_validated = False (Last 5)
+                cursor.execute(
+                    """
+                    SELECT u.first_name, u.last_name, d.id_demande 
+                    FROM demande_de_devis d
+                    INNER JOIN auth_user u ON d.id_user = u.id
+                    WHERE u.is_validated = FALSE
+                    ORDER BY d.id_demande DESC 
+                    LIMIT 5
+                    """
+                )
+                recent_demandes = [
+                    {"firstName": row[0], "lastName": row[1], "id": str(row[2])}
+                    for row in cursor.fetchall()
+                ]
+
+                # Visitors Data (Last 7 days)
+                cursor.execute(
+                    """
+                    SELECT DATE(date_joined) AS date, COUNT(*) AS visits
+                    FROM auth_user
+                    WHERE date_joined >= %s
+                    GROUP BY DATE(date_joined)
+                    ORDER BY DATE(date_joined) DESC
+                    LIMIT 7
+                    """,
+                    [datetime.now() - timedelta(days=7)],
+                )
+                visitors = [
+                    {"date": str(row[0]), "visits": row[1]}
+                    for row in cursor.fetchall()
+                ]
+
+            # Response Data
+            response_data = {
+                "totalClients": total_clients,
+                "totalArtisans": total_artisans,
+                "totalDeals": total_deals,
+                "artisanPercentage": round(artisan_percentage, 2),
+                "clientPercentage": round(client_percentage, 2),
+                "recentTaches": recent_taches,
+                "recentDemandes": recent_demandes,
+                "visitors": visitors,
+            }
+
+            return JsonResponse(response_data, status=200)
+        finally:
+            connection.close()  # Ensure the connection is closed
+    except Exception as e:
+        logger.error(f"Error in superuser_dashboard: {e}")
+        return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+
+@csrf_exempt
+def search_artisans_by_job(request):
+    if request.method == "POST":
+        try:
+            # Check if the request body is empty
+            if not request.body:
+                return JsonResponse({"success": False, "message": "Request body is empty."}, status=400)
+
+            # Parse JSON payload
+            data = json.loads(request.body.decode("utf-8"))
+            job_name = data.get("job")
+
+            # Validate input
+            if not job_name:
+                return JsonResponse({"success": False, "message": "Job field is required."}, status=400)
+
+            # Connect to the database
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Query to find artisans based on partial match of the job name
+                    cursor.execute(
+                        """
+                        SELECT u.first_name || ' ' || u.last_name AS artisanName,
+                               u.pfp AS artisanPfpLink,
+                               c.certificat_joint AS artisanPortfolio
+                        FROM auth_user u
+                        LEFT JOIN certificat c ON u.id = c.id_user
+                        INNER JOIN metier m ON u.idMetier = m.idMetier
+                        WHERE m.Nmetier ILIKE %s AND u.isCertified = TRUE AND u.is_validated = TRUE
+                        """,
+                        [f"%{job_name}%"]  # Use % for partial matching
+                    )
+
+                    # Fetch results
+                    artisans = []
+                    rows = cursor.fetchall()
+                    for row in rows:
+                        artisan_name, pfp_link, portfolio_link = row
+                        artisans.append({
+                            "artisanName": artisan_name,
+                            "artisanPfpLink": pfp_link or "",  # Default to empty string if no profile picture
+                            "artisanPortfolio": portfolio_link or ""  # Default to empty string if no portfolio
+                        })
+
+                    # Return results
+                    return JsonResponse({"artisans": artisans}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+
+    # Handle invalid request methods
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from math import ceil
+
+@csrf_exempt
+def admin_clients(request):
+    if request.method == "GET":
+        try:
+            # Get page number from query parameters
+            page = int(request.GET.get("page", 1))  # Default to page 1 if not provided
+            clients_per_page = 5  # Number of clients per page
+
+            # Connect to the database
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Get total number of clients
+                    cursor.execute(
+                        "SELECT COUNT(*) FROM auth_user WHERE is_staff = FALSE AND is_superuser = FALSE"
+                    )
+                    total_clients = cursor.fetchone()[0]
+
+                    # Calculate total pages
+                    total_pages = ceil(total_clients / clients_per_page)
+
+                    # Validate page number
+                    if page < 1 or page > total_pages:
+                        return JsonResponse(
+                            {"success": False, "message": "Invalid page number."},
+                            status=400,
+                        )
+
+                    # Fetch clients for the current page
+                    offset = (page - 1) * clients_per_page
+                    cursor.execute(
+                        """
+                        SELECT first_name, last_name, id, email, phoneNumber, 
+                               CASE 
+                                   WHEN pfp ILIKE '%%female%%' THEN 'Female'
+                                   WHEN pfp ILIKE '%%male%%' THEN 'Male'
+                                   ELSE 'Unknown' 
+                               END AS gender
+                        FROM auth_user
+                        WHERE is_staff = FALSE AND is_superuser = FALSE
+                        ORDER BY id
+                        LIMIT %s OFFSET %s
+                        """,
+                        [clients_per_page, offset],
+                    )
+                    rows = cursor.fetchall()
+
+                    # Format the clients data
+                    clients = [
+                        {
+                            "firstName": row[0],
+                            "lastName": row[1],
+                            "id": row[2],
+                            "email": row[3],
+                            "phoneNumber": row[4],
+                            "gender": row[5],
+                        }
+                        for row in rows
+                    ]
+
+                    # Response with pagination metadata
+                    response_data = {
+                        "clients": clients,
+                        "pagination": {
+                            "currentPage": page,
+                            "totalPages": total_pages,
+                            "totalClients": total_clients,
+                        },
+                    }
+                    return JsonResponse(response_data, status=200)
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse(
+                {"success": False, "message": f"An error occurred: {str(e)}"},
+                status=500,
+            )
+
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+@csrf_exempt
+def delete_client(request):
+    if request.method == "POST":
+        try:
+            # Parse the request body to get the client ID
+            data = json.loads(request.body.decode("utf-8"))
+            client_id = data.get("id")
+
+            # Validate that 'id' is provided
+            if not client_id:
+                return JsonResponse({"success": False, "message": "Client ID is required."}, status=400)
+
+            # Connect to the database
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Check if the client exists
+                    cursor.execute(
+                        "SELECT id FROM auth_user WHERE id = %s AND is_staff = FALSE AND is_superuser = FALSE",
+                        [client_id]
+                    )
+                    if not cursor.fetchone():
+                        return JsonResponse({"success": False, "message": "Client not found."}, status=404)
+
+                    # Delete the client
+                    cursor.execute(
+                        "DELETE FROM auth_user WHERE id = %s AND is_staff = FALSE AND is_superuser = FALSE",
+                        [client_id]
+                    )
+                    connection.commit()
+
+                    # Success response
+                    return JsonResponse({"success": True, "message": "Client deleted successfully."}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            # Handle errors
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+
+    # Handle invalid HTTP methods
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+@csrf_exempt
+def admin_artisans(request):
+    if request.method == "GET":
+        try:
+            # Get page number from query parameters
+            page = int(request.GET.get("page", 1))  # Default to page 1
+            artisans_per_page = 5  # Number of artisans per page
+
+            # Connect to the database
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Get total number of artisans
+                    cursor.execute(
+                        "SELECT COUNT(*) FROM auth_user WHERE is_staff = TRUE AND is_superuser = FALSE"
+                    )
+                    total_artisans = cursor.fetchone()[0]
+
+                    # Calculate total pages
+                    total_pages = ceil(total_artisans / artisans_per_page)
+
+                    # Validate page number
+                    if page < 1 or page > total_pages:
+                        return JsonResponse(
+                            {"success": False, "message": "Invalid page number."},
+                            status=400,
+                        )
+
+                    # Fetch artisans for the current page
+                    offset = (page - 1) * artisans_per_page
+                    cursor.execute(
+                        """
+                        SELECT first_name, last_name, id, email, phoneNumber, 
+                               CASE 
+                                   WHEN isCertified THEN 'Certified' 
+                                   ELSE 'Not Certified' 
+                               END AS status
+                        FROM auth_user
+                        WHERE is_staff = TRUE AND is_superuser = FALSE
+                        ORDER BY id
+                        LIMIT %s OFFSET %s
+                        """,
+                        [artisans_per_page, offset],
+                    )
+                    rows = cursor.fetchall()
+
+                    # Format the artisans data
+                    artisans = [
+                        {
+                            "firstName": row[0],
+                            "lastName": row[1],
+                            "id": str(row[2]),
+                            "email": row[3],
+                            "phoneNumber": row[4],
+                            "status": row[5],
+                        }
+                        for row in rows
+                    ]
+
+                    # Response with pagination metadata
+                    response_data = {
+                        "artisans": artisans,
+                        "pagination": {
+                            "currentPage": page,
+                            "totalPages": total_pages,
+                            "totalArtisans": total_artisans,
+                        },
+                    }
+                    return JsonResponse(response_data, status=200)
+            finally:
+                connection.close()
+
+        except Exception as e:
+            # Handle errors
+            return JsonResponse(
+                {"success": False, "message": f"An error occurred: {str(e)}"},
+                status=500,
+            )
+
+    # Handle invalid HTTP methods
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+@csrf_exempt
+def delete_artisan(request):
+    if request.method == "POST":
+        try:
+            # Parse the request body to get the artisan ID
+            data = json.loads(request.body.decode("utf-8"))
+            artisan_id = data.get("id")
+
+            # Validate that 'id' is provided
+            if not artisan_id:
+                return JsonResponse({"success": False, "message": "Artisan ID is required."}, status=400)
+
+            # Connect to the database
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Check if the artisan exists
+                    cursor.execute(
+                        "SELECT id FROM auth_user WHERE id = %s AND is_staff = TRUE AND is_superuser = FALSE",
+                        [artisan_id]
+                    )
+                    if not cursor.fetchone():
+                        return JsonResponse({"success": False, "message": "Artisan not found."}, status=404)
+
+                    # Delete the artisan
+                    cursor.execute(
+                        "DELETE FROM auth_user WHERE id = %s AND is_staff = TRUE AND is_superuser = FALSE",
+                        [artisan_id]
+                    )
+                    connection.commit()
+
+                    # Success response
+                    return JsonResponse({"success": True, "message": "Artisan deleted successfully."}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            # Handle errors
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+
+    # Handle invalid HTTP methods
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)

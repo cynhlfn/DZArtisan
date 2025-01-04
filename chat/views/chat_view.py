@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 def chat(request, username):
     if not request.user.is_authenticated:
-        logger.warning("Bypassing authentication for testing purposes.")
-        request.user = User.objects.get(username="karim")  # Set a specific user for testing
+        #logger.warning("Bypassing authentication for testing purposes.")
+        #request.user = User.objects.get(username="karim") 
+        return JsonResponse({"error": "You must be logged in to perform this action."}, status=403)
     try:
         usersen = request.user
         friend = None
@@ -92,8 +93,9 @@ def chat(request, username):
 @csrf_exempt
 def message_list(request, sender=None, receiver=None):
     if not request.user.is_authenticated:
-        logger.warning("Bypassing authentication for testing purposes.")
-        request.user = User.objects.get(username="karim")  # Set a specific user for testing
+        #logger.warning("Bypassing authentication for testing purposes.")
+        #request.user = User.objects.get(username="karim") 
+        return JsonResponse({"error": "You must be logged in to perform this action."}, status=403)
     try:
         if request.method == "GET":
             messages_list = []
