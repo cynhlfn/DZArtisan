@@ -5,27 +5,21 @@ from django.db import transaction
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
-from django.views.decorators.csrf import csrf_exempt
 import json
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.decorators import login_required
 from math import ceil
 from django.contrib.auth import authenticate, login, logout
-
-from django.contrib.auth.models import User
-
-from django.contrib.auth.hashers import check_password
-
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from math import ceil
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import check_password
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-import json
-
 from datetime import datetime, timedelta
 from django.utils.timezone import now  # Ensures compatibility with timezone-aware databases
-
 import cloudinary.uploader
-
 import cloudinary
 
 
@@ -710,9 +704,7 @@ def search_artisans_by_job(request):
 
     # Handle invalid request methods
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from math import ceil
+
 
 @csrf_exempt
 def admin_clients(request):
