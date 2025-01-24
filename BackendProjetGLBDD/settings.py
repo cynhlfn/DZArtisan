@@ -256,9 +256,9 @@ TEMPLATES = [
 
 # Cookie settings
 SESSION_COOKIE_SAMESITE = 'Lax'  # Use 'Lax' or 'Strict' for SameSite
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = True  # Set to True in production with HTTPS
 CSRF_COOKIE_SAMESITE = 'Lax'  # Use 'Lax' or 'Strict' for SameSite
-CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_SECURE = True  # Set to True in production with HTTPS
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins (for development only)
@@ -269,6 +269,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",  # Add your frontend origin(s) here
     "http://127.0.0.1:3000",
     "https://dzartisan-app.onrender.com",  # Add your production frontend URL
+    "onecs-project.onrender.com"
 ]
 
 
