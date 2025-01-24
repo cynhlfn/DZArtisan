@@ -897,14 +897,12 @@ def delete_artisan(request):
 
     # Handle invalid HTTP methods
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
 @csrf_exempt
 def edit_password(request):
     if not request.session.get('is_authenticated'):
         return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
+      
     if request.method == "POST":
         try:
             # Check if the user is authenticated via session
@@ -967,20 +965,13 @@ def edit_password(request):
     # Handle non-POST requests
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
+
 @csrf_exempt
 def edit_client_profile(request):
     if not request.session.get('is_authenticated'):
         return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
     if request.method == "POST":
         try:
-            # Check if the user is authenticated via session
-            if not request.session.get('is_authenticated'):
-                return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre profil."}, status=403)
-
             # Get the user's ID from the session
             client_id = request.session.get('user_id')
             if not client_id:
@@ -1046,13 +1037,10 @@ def edit_client_profile(request):
 
 
 @csrf_exempt
-def get_client_pannier(request, idClient):
+def get_client_pannier(request, idClient): 
     if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
 
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
     if request.method == "GET":
         try:
             # Connect to the database
@@ -1107,13 +1095,10 @@ def get_client_pannier(request, idClient):
 
 
 @csrf_exempt
-def new_demand(request):
+def new_demand(request): 
     if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
 
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
     if request.method == "POST":
         try:
             # Check if the request body is empty
@@ -1192,11 +1177,8 @@ def new_demand(request):
 @csrf_exempt
 def current_demands(request, id_client):
     if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
 
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
     if request.method == "GET":
         try:
             # Connect to the database
@@ -1282,14 +1264,8 @@ def current_demands(request, id_client):
 @csrf_exempt
 def approve_offer(request, idClient, idOffer):
     if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
 
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
-    """
-    Approves an offer and creates a deal.
-    """
     if request.method == "GET":
         try:
             # Database connection
@@ -1353,13 +1329,10 @@ def approve_offer(request, idClient, idOffer):
 
 
 @csrf_exempt
-def get_client_deal_tasks(request, idClient, idDeal):
+def get_client_deal_tasks(request, idClient, idDeal):  
     if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
+    
     if request.method == "GET":
         try:
             # Connect to the database
@@ -1429,3 +1402,586 @@ def get_client_deal_tasks(request, idClient, idDeal):
             return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
 
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+@csrf_exempt
+def edit_artisan_profile(request):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre profil."}, status=403)
+
+    # Ensure the user is an artisan
+    if not request.session.get('is_staff', False):
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour modifier ce profil."}, status=403)
+
+    if request.method == "POST":
+        try:
+            # Parse the request body
+            if not request.body:
+                return JsonResponse({"success": False, "message": "Le corps de la requête est vide."}, status=400)
+
+            data = json.loads(request.body.decode("utf-8"))
+
+            # Extract optional fields to update
+            first_name = data.get("firstName", "").strip()
+            last_name = data.get("LastName", "").strip()
+            phone_number = data.get("PhoneNumber", "").strip()
+            email = data.get("email", "").strip()
+            pfp = data.get("pfp", "").strip()  # Profile picture URL or Base64
+
+            # Get artisan ID from the session
+            artisan_id = request.session.get('user_id')
+            if not artisan_id:
+                return JsonResponse({"success": False, "message": "Erreur de session: artisan non trouvé."}, status=403)
+
+            # Build the fields to update dynamically
+            fields_to_update = []
+            params = []
+
+            if first_name:
+                fields_to_update.append("first_name = %s")
+                params.append(first_name)
+            if last_name:
+                fields_to_update.append("last_name = %s")
+                params.append(last_name)
+            if phone_number:
+                fields_to_update.append("phoneNumber = %s")
+                params.append(phone_number)
+            if email:
+                fields_to_update.append("email = %s")
+                params.append(email)
+            if pfp:
+                fields_to_update.append("pfp = %s")
+                params.append(pfp)
+
+            # If no fields to update, return success
+            if not fields_to_update:
+                return JsonResponse({"success": True, "message": "Aucune modification apportée."}, status=200)
+
+            # Update the database
+            query = f"UPDATE auth_user SET {', '.join(fields_to_update)} WHERE id = %s"
+            params.append(artisan_id)
+
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(query, params)
+                    connection.commit()
+                    return JsonResponse({"success": True, "message": "Profil mis à jour avec succès."}, status=200)
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+@csrf_exempt
+def edit_password(request):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
+
+    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour modifier votre mot de passe."}, status=403)
+
+    if request.method == "POST":
+        try:
+            # Parse the request body
+            if not request.body:
+                return JsonResponse({"success": False, "message": "Le corps de la requête est vide."}, status=400)
+
+            data = json.loads(request.body.decode("utf-8"))
+            old_password = data.get("oldPassword")
+            new_password = data.get("newPassword")
+
+            # Validate input
+            if not old_password or not new_password:
+                return JsonResponse({"success": False, "message": "Les champs 'oldPassword' et 'newPassword' sont requis."}, status=400)
+
+            # Get user ID from the session
+            artisan_id = request.session.get('user_id')
+            if not artisan_id:
+                return JsonResponse({"success": False, "message": "Utilisateur non trouvé dans la session."}, status=403)
+
+            # Database connection
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Retrieve the artisan's current password from the database
+                    cursor.execute("SELECT password FROM auth_user WHERE id = %s AND is_staff = TRUE", [artisan_id])
+                    user_row = cursor.fetchone()
+                    if not user_row:
+                        return JsonResponse({"success": False, "message": "Artisan introuvable."}, status=404)
+
+                    db_password = user_row[0]
+
+                    # Verify the old password
+                    if not check_password(old_password, db_password):
+                        return JsonResponse({"success": False, "message": "L'ancien mot de passe est incorrect."}, status=400)
+
+                    # Hash the new password
+                    hashed_new_password = make_password(new_password)
+
+                    # Update the artisan's password in the database
+                    cursor.execute(
+                        "UPDATE auth_user SET password = %s WHERE id = %s AND is_staff = TRUE",
+                        [hashed_new_password, artisan_id]
+                    )
+                    connection.commit()
+
+                # Return success response
+                return JsonResponse({"success": True, "message": "Mot de passe modifié avec succès."}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+@csrf_exempt
+def get_devis_by_job(request, job):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour voir les devis."}, status=403)
+
+    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder aux devis."}, status=403)
+
+    if request.method == "GET":
+        try:
+            # Database connection
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Query to fetch devis based on the artisan's job
+                    cursor.execute(
+                        """
+                        SELECT 
+                            dd.id_demande AS id,
+                            au.first_name AS clientFirstName,
+                            au.last_name AS clientLastName,
+                            dd.titre AS title,
+                            COALESCE(ie.image, '') AS imgLink
+                        FROM demande_de_devis dd
+                        INNER JOIN auth_user au ON dd.id_user = au.id
+                        LEFT JOIN image_exemple ie ON dd.id_demande = ie.id_demande
+                        WHERE dd.metier = %s
+                        ORDER BY dd.id_demande DESC
+                        """,
+                        [job]
+                    )
+
+                    # Fetch results
+                    rows = cursor.fetchall()
+
+                    # Format the response
+                    devis = [
+                        {
+                            "id": row[0],
+                            "clientFirstName": row[1],
+                            "clientLastName": row[2],
+                            "title": row[3],
+                            "imgLink": row[4]
+                        }
+                        for row in rows
+                    ]
+
+                # Return the data as JSON
+                return JsonResponse({"devis": devis}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+@csrf_exempt
+def get_one_devis(request, id):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour voir les détails du devis."}, status=403)
+
+    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder à ce devis."}, status=403)
+
+    if request.method == "GET":
+        try:
+            # Database connection
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Query to fetch details of the specified devis
+                    cursor.execute(
+                        """
+                        SELECT 
+                            dd.id_demande AS id,
+                            au.first_name AS clientFirstName,
+                            au.last_name AS clientLastName,
+                            dd.titre AS title,
+                            dd.description AS description,
+                            COALESCE(pd.prix, 0) AS estimatedPrice
+                        FROM 
+                            demande_de_devis dd
+                        INNER JOIN 
+                            auth_user au ON dd.id_user = au.id
+                        LEFT JOIN 
+                            prix_de_demande pd ON dd.id_demande = pd.id_demande
+                        WHERE 
+                            dd.id_demande = %s
+                        """,
+                        [id]
+                    )
+                    devis_row = cursor.fetchone()
+
+                    if not devis_row:
+                        return JsonResponse({"success": False, "message": "Le devis spécifié est introuvable."}, status=404)
+
+                    # Extract data for the devis
+                    devis = {
+                        "id": devis_row[0],
+                        "clientFirstName": devis_row[1],
+                        "clientLastName": devis_row[2],
+                        "title": devis_row[3],
+                        "description": devis_row[4],
+                        "estimatedPrice": float(devis_row[5]),
+                        "imgLinks": []  # Placeholder for images
+                    }
+
+                    # Fetch associated images for the devis
+                    cursor.execute(
+                        """
+                        SELECT 
+                            image 
+                        FROM 
+                            image_exemple 
+                        WHERE 
+                            id_demande = %s
+                        """,
+                        [id]
+                    )
+                    images = cursor.fetchall()
+                    devis["imgLinks"] = [img[0] for img in images]
+
+                # Return the devis details as JSON
+                return JsonResponse({"devis": devis}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+@csrf_exempt
+def make_offer(request, id):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour faire une offre."}, status=403)
+
+    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour faire une offre."}, status=403)
+
+    if request.method == "POST":
+        try:
+            # Parse the request body
+            if not request.body:
+                return JsonResponse({"success": False, "message": "Le corps de la requête est vide."}, status=400)
+
+            data = json.loads(request.body.decode("utf-8"))
+            artisan_id = data.get("artisanId")
+            price = data.get("price")
+
+            # Validate input
+            if not artisan_id or not price:
+                return JsonResponse({"success": False, "message": "Les champs 'artisanId' et 'price' sont requis."}, status=400)
+
+            # Database connection
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Check if the devis exists
+                    cursor.execute(
+                        "SELECT id_demande FROM demande_de_devis WHERE id_demande = %s",
+                        [id]
+                    )
+                    devis_row = cursor.fetchone()
+                    if not devis_row:
+                        return JsonResponse({"success": False, "message": "Le devis spécifié est introuvable."}, status=404)
+
+                    # Check if the artisan already made an offer for this devis
+                    cursor.execute(
+                        """
+                        SELECT id_offre FROM offre
+                        WHERE id_artisan = %s AND id_demande = %s
+                        """,
+                        [artisan_id, id]
+                    )
+                    if cursor.fetchone():
+                        return JsonResponse({"success": False, "message": "Vous avez déjà fait une offre pour ce devis."}, status=400)
+
+                    # Insert the offer into the `offre` table
+                    cursor.execute(
+                        """
+                        INSERT INTO offre (offered_price, id_artisan, id_demande)
+                        VALUES (%s, %s, %s)
+                        """,
+                        [price, artisan_id, id]
+                    )
+                    connection.commit()
+
+                # Success response
+                return JsonResponse({"success": True, "message": "Offre faite avec succès."}, status=201)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+@csrf_exempt
+def get_artisan_deals(request, id):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour voir vos offres."}, status=403)
+
+    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder à ces données."}, status=403)
+
+    if request.method == "GET":
+        try:
+            # Database connection
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Query to fetch all deals assigned to the artisan
+                    cursor.execute(
+                        """
+                        SELECT 
+                            t.id_travail AS id,
+                            au.first_name || ' ' || au.last_name AS clientName,
+                            dd.titre AS title,
+                            CASE 
+                                WHEN COUNT(mt.id_tache) = 0 THEN 0
+                                ELSE ROUND(100.0 * SUM(CASE WHEN mt.etat = 'fait' THEN 1 ELSE 0 END) / COUNT(mt.id_tache), 2)
+                            END AS pourcentage
+                        FROM 
+                            travail t
+                        INNER JOIN 
+                            offre o ON t.id_offre = o.id_offre
+                        INNER JOIN 
+                            demande_de_devis dd ON o.id_demande = dd.id_demande
+                        INNER JOIN 
+                            auth_user au ON dd.id_user = au.id
+                        LEFT JOIN 
+                            Mini_Tache mt ON t.id_travail = mt.id_travail
+                        WHERE 
+                            o.id_artisan = %s
+                        GROUP BY 
+                            t.id_travail, au.first_name, au.last_name, dd.titre
+                        ORDER BY 
+                            t.id_travail DESC
+                        """,
+                        [id]
+                    )
+
+                    # Fetch results
+                    rows = cursor.fetchall()
+
+                    # Format the response
+                    deals = [
+                        {
+                            "id": row[0],
+                            "clientName": row[1],
+                            "title": row[2],
+                            "pourcentage": float(row[3])  # Completion percentage
+                        }
+                        for row in rows
+                    ]
+
+                # Return the data as JSON
+                return JsonResponse({"deals": deals}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+@csrf_exempt
+def get_deal_tasks(request, idArtisan, idDeal):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour accéder aux tâches."}, status=403)
+
+    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder à ces données."}, status=403)
+
+    if request.method == "GET":
+        try:
+            # Database connection
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Verify the deal belongs to the artisan
+                    cursor.execute(
+                        """
+                        SELECT t.id_travail
+                        FROM travail t
+                        INNER JOIN offre o ON t.id_offre = o.id_offre
+                        WHERE t.id_travail = %s AND o.id_artisan = %s
+                        """,
+                        [idDeal, idArtisan]
+                    )
+                    deal_row = cursor.fetchone()
+
+                    if not deal_row:
+                        return JsonResponse({"success": False, "message": "Ce deal n'existe pas ou n'est pas attribué à cet artisan."}, status=404)
+
+                    # Fetch tasks associated with the deal
+                    cursor.execute(
+                        """
+                        SELECT 
+                            mt.id_tache AS id,
+                            mt.description,
+                            mt.dateDebut,
+                            mt.dateFin,
+                            mt.etat
+                        FROM 
+                            Mini_Tache mt
+                        WHERE 
+                            mt.id_travail = %s
+                        """,
+                        [idDeal]
+                    )
+
+                    tasks = cursor.fetchall()
+
+                    # Categorize tasks
+                    restantes = []
+                    encour = []
+                    terminer = []
+
+                    for task in tasks:
+                        task_id, description, date_debut, date_fin, etat = task
+                        task_data = {
+                            "id": task_id,
+                            "description": description,
+                            "dateDebut": str(date_debut) if date_debut else None,
+                            "dateFin": str(date_fin) if date_fin else None,
+                        }
+
+                        if etat == "a_faire":
+                            restantes.append(task_data)
+                        elif etat == "en cours":
+                            encour.append(task_data)
+                        elif etat == "fait":
+                            terminer.append(task_data)
+
+                # Return categorized tasks
+                return JsonResponse(
+                    {
+                        "restantes": restantes,
+                        "encour": encour,
+                        "terminer": terminer,
+                    },
+                    status=200
+                )
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+@csrf_exempt
+def edit_deal_task(request, idArtisan, idDeal):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier une tâche."}, status=403)
+
+    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour effectuer cette action."}, status=403)
+
+    if request.method == "POST":
+        try:
+            # Parse request body
+            if not request.body:
+                return JsonResponse({"success": False, "message": "Le corps de la requête est vide."}, status=400)
+
+            data = json.loads(request.body.decode("utf-8"))
+
+            # Extract task ID and fields to update
+            task_id = data.get("id")
+            new_status = data.get("etat", "").strip()  # Status change (e.g., 'en cours', 'fait')
+            description = data.get("description", "").strip()
+            date_debut = data.get("dateDebut", "").strip()
+            date_fin = data.get("dateFin", "").strip()
+
+            if not task_id:
+                return JsonResponse({"success": False, "message": "L'identifiant de la tâche est requis."}, status=400)
+
+            # Database connection
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Verify the deal belongs to the artisan
+                    cursor.execute(
+                        """
+                        SELECT t.id_travail
+                        FROM travail t
+                        INNER JOIN offre o ON t.id_offre = o.id_offre
+                        WHERE t.id_travail = %s AND o.id_artisan = %s
+                        """,
+                        [idDeal, idArtisan]
+                    )
+                    deal_row = cursor.fetchone()
+
+                    if not deal_row:
+                        return JsonResponse({"success": False, "message": "Ce deal n'existe pas ou n'est pas attribué à cet artisan."}, status=404)
+
+                    # Check if the task exists
+                    cursor.execute(
+                        "SELECT id_tache FROM Mini_Tache WHERE id_tache = %s AND id_travail = %s",
+                        [task_id, idDeal]
+                    )
+                    existing_task = cursor.fetchone()
+
+                    if not existing_task:
+                        return JsonResponse({"success": False, "message": "La tâche spécifiée n'existe pas."}, status=404)
+
+                    # Update the task if it exists
+                    fields_to_update = []
+                    params = []
+
+                    if new_status:
+                        fields_to_update.append("etat = %s")
+                        params.append(new_status)
+                    if description:
+                        fields_to_update.append("description = %s")
+                        params.append(description)
+                    if date_debut:
+                        fields_to_update.append("dateDebut = %s")
+                        params.append(date_debut)
+                    if date_fin:
+                        fields_to_update.append("dateFin = %s")
+                        params.append(date_fin)
+
+                    if not fields_to_update:
+                        return JsonResponse({"success": False, "message": "Aucune modification apportée."}, status=400)
+
+                    query = f"UPDATE Mini_Tache SET {', '.join(fields_to_update)} WHERE id_tache = %s AND id_travail = %s"
+                    params.extend([task_id, idDeal])
+
+                    cursor.execute(query, params)
+                    connection.commit()
+
+                return JsonResponse({"success": True, "message": "Tâche mise à jour avec succès."}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)

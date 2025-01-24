@@ -21,6 +21,16 @@ urlpatterns = [
   path("client/current-demands/<int:id_client>/", views.current_demands, name="current_demands"),
   path('client/demand/offer-approve/<int:idClient>/<int:idOffer>/', views.approve_offer, name='approve_offer'),
   path('client/deals/<int:idClient>/<int:idDeal>/', views.get_client_deal_tasks, name='get_client_deal_tasks'),
+  path('artisan/edit_artisan_profile/', views.edit_artisan_profile, name='edit_artisan_profile'),
+  path('artisan/edit-password/', views.edit_password, name='edit_password'),
+  path('artisan/devis/<str:job>/', views.get_devis_by_job, name='get_devis_by_job'),
+  path('artisan/one-devis/<int:id>/', views.get_one_devis, name='get_one_devis'),
+  path('artisan/one-devis/<int:id>/offer/', views.make_offer, name='make_offer'),
+  path('artisan/deals/<int:id>/', views.get_artisan_deals, name='get_artisan_deals'),
+  path('artisan/deals/<int:idArtisan>/<int:idDeal>/', views.get_deal_tasks, name='get_deal_tasks'),
+  path('artisan/deals/<int:idArtisan>/<int:idDeal>/edit/', views.edit_deal_task, name='edit_deal_task'),
+
+
   # path('create-user/', views.create_user, name='create_user'),
   # path('login-user/', views.login_user, name='login_user'),
   # path('search-user/', views.search_user, name='search_user'),
