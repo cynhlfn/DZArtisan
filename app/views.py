@@ -294,6 +294,10 @@ def user_login(request):
             request.session['is_superuser'] = is_superuser
             request.session['is_staff'] = is_staff
 
+            session_id = request.session.session_key
+            if not session_id:
+                request.session.create()  # Create session if it does not exist
+                session_id = request.session.session_key
 
             role = "admin" if is_superuser else "artisan" if is_staff else "client"
 
@@ -305,7 +309,8 @@ def user_login(request):
                 "lastName": last_name,
                 "email": email,
                 "phoneNumber": phone_number,
-                "pfpLink": pfp
+                "pfpLink": pfp,
+                "sessionID": session_id,
             }
 
 
@@ -511,6 +516,8 @@ def email_taken(request):
 
 
  # Ensure only superusers can access
+
+@csrf_exempt
 def admin_dashboard(request):
     # Bypass for testing purposes
     if not request.session.get('is_authenticated'):
