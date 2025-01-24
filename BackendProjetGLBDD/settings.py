@@ -194,7 +194,7 @@ SESSION_COOKIE_NAME = 'sessionid'  # Default session cookie name
 
 
 SESSION_COOKIE_AGE = 300  # 2 weeks in seconds (default)
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # False by default; session persists after browser close
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # False by default; session persists after browser close
 
 
 # Static files (CSS, JavaScript, Images)
@@ -254,7 +254,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
-SESSION_COOKIE_SAMESITE = 'None' 
+SESSION_COOKIE_SAMESITE = 'latex' 
 SESSION_COOKIE_SECURE = True  
 
 
@@ -262,7 +262,8 @@ CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",  # Add your frontend origin(s) here
+    "http://127.0.0.1:3000",
     "onecs-project.onrender.com",
-]
+]   
 
 
