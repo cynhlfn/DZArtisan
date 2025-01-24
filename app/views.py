@@ -389,6 +389,63 @@ def validate_artisan(request, artisan_id):
 
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
+@csrf_exempt
+def refuser_artisan(request, artisan_id):
+    # Check if the user is authenticated via session
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
+
+    # Check if the user is a superuser
+    if not request.session.get('is_superuser', False):
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
+
+    if request.method == "POST":
+        try:
+            # Query to check if the artisan exists and is not already validated
+            connection = get_db_connection()
+
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT id, is_validated
+                        FROM auth_user
+                        WHERE id = %s
+                        """,
+                        [artisan_id]
+                    )
+                    artisan_row = cursor.fetchone()
+
+                    if not artisan_row:
+                        return JsonResponse({"success": False, "message": "Aucun artisan trouvé avec cet ID."}, status=404)
+
+                    artisan_id, is_validated = artisan_row
+
+                    # Check if the artisan is already validated
+                    if is_validated:
+                        return JsonResponse({"success": False, "message": "Cet artisan est déjà validé."}, status=400)
+
+                    # Update artisan's validation status
+                    cursor.execute(
+                        """
+                        DELETE FROM auth_user
+                        WHERE id = %s
+                        """,
+                        [artisan_id]
+                    )
+                    connection.commit()
+
+                return JsonResponse({"success": True, "message": "L'artisan a été supprimer avec success."}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+
 def save_files(files, artisan_id, table_name, connection):
     """
     Save files to Cloudinary and store their URLs in the database.
@@ -540,6 +597,8 @@ def email_taken(request):
             return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
 
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+
 
  # Ensure only superusers can access
 def admin_dashboard(request):
@@ -956,3 +1015,190 @@ def delete_artisan(request):
 
     # Handle invalid HTTP methods
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+
+@csrf_exempt
+def admin_demandes(request):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté ."}, status=403)
+
+    # Check if the user is a superuser
+    if not request.session.get('is_superuser', False):
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires."}, status=403)
+
+    if request.method == "GET":
+        try:
+            page = int(request.GET.get("page", 1))
+            demandes_per_page = 5
+
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT COUNT(*) FROM auth_user WHERE is_staff = TRUE AND is_superuser = FALSE AND is_validated = FALSE"
+                    )
+
+                    number_of_demandes = cursor.fetchone()[0]
+
+                    total_pages = ceil(number_of_demandes / demandes_per_page)
+                    if total_pages == 0:
+                        return JsonResponse(
+                            {"success": False, "message": "Aucune demande n'est disponible."},
+                            status=200,
+                        )
+                    if page < 1 or page > total_pages:
+                        return JsonResponse(
+                            {"success": False, "message": "Invalid page number."},
+                            status=400,
+                        )
+                    offset = (page - 1) * demandes_per_page
+                    cursor.execute(
+                        """
+                        SELECT 
+                            A.first_name, 
+                            A.last_name, 
+                            A.id, 
+                            A.isCertified, 
+                            A.isAssured, 
+                            CASE WHEN A.isCertified = TRUE THEN C.certificat_joint ELSE NULL END AS certificateLink,
+                            CASE WHEN A.isAssured = TRUE THEN B.assurance ELSE NULL END AS assuranceLink,
+                            J.Nmetier
+                        FROM 
+                            auth_user A
+                        LEFT JOIN 
+                            assurance B ON A.id = B.id_user
+                        LEFT JOIN 
+                            certificat C ON A.id = C.id_user
+                        LEFT JOIN 
+                            metier J ON A.idMetier = J.idMetier
+                        WHERE 
+                            A.is_staff = TRUE 
+                            AND A.is_superuser = FALSE 
+                            AND A.is_validated = FALSE
+                        ORDER BY 
+                            A.id 
+                        LIMIT %s OFFSET %s
+                        """,
+                        [demandes_per_page, offset],
+                    )
+
+                    rows = cursor.fetchall()
+
+                    demandes = [
+                        {
+                            "id": row[2], "firstName": row[0], "lastName": row[1], "is_certified": row[3], "certificateLink": row[6],
+                            "is_assured": row[4],
+                            "assuranceLink": row[5], "job": row[7],
+                        }
+                        for row in rows
+                    ]
+
+                    response_data = {
+                        "demandes": demandes,
+                        "pagination": {
+                            "currentPage": page,
+                            "totalPages": total_pages,
+                            "totalDemandes": number_of_demandes,
+                        }
+                    }
+
+                    return JsonResponse(response_data, status=200)
+            finally:
+                connection.close()
+        except Exception as e:
+            return JsonResponse(
+                {"success": False, "message": f"An error occurred: {str(e)}"},
+                status=500,
+            )
+
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+                    
+
+@csrf_exempt
+def admin_demande(request, id_dem):
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({"success": False, "message": "Vous devez être connecté."}, status=403)
+
+    # Check if the user is a superuser
+    if not request.session.get('is_superuser', False):
+        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires."}, status=403)
+
+    if request.method == "GET":
+        try:
+            if id_dem:
+                connection = get_db_connection()
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "SELECT id , first_name , last_name , isCertified ,  isAssured, idMetier FROM auth_user WHERE id = %s",
+                                [id_dem]
+                        )  
+                        user_row = cursor.fetchone()
+
+                        if not user_row:
+                            return JsonResponse ({"success": False, "message":"pas de demande avec cet id"}, status=404)
+                        
+                        (
+                            user_id, first_name, last_name, is_certified, is_assured, idMetier
+                        ) = user_row
+
+                        cursor.execute(
+                            " SELECT Nmetier FROM  metier WHERE idMetier = %s ", [idMetier]
+                        )
+
+                        job = cursor.fetchone()
+
+                        if not job:
+                            return JsonResponse({"success": False, "message": "le metier n'a pas été trouver"}, status=404)
+                        
+                        
+                        cursor.execute(
+                            " SELECT assurance FROM  assurance WHERE id_user = %s ", [user_id]
+                        )
+
+                        assurance_files = cursor.fetchall()
+
+
+                        if not assurance_files:
+                            # If no assurance files are found
+                            assurance_files = []
+                        
+                        
+                        assurance_files_list = [row[0] for row in assurance_files]
+                        
+                        cursor.execute(
+                            " SELECT certificat_joint FROM  certificat WHERE id_user = %s ", [user_id]
+                        )
+
+                        certificate_files = cursor.fetchall()
+
+
+                        if not certificate_files:
+                            # If no assurance files are found
+                            assurance_files = []
+                        
+                        
+                        certificate_files_list = [row[0] for row in certificate_files]
+                    
+                        response_data = {
+                            "id": user_id,
+                            "first_name": first_name,
+                            "last_name": last_name,
+                            "is_certified": is_certified,
+                            "is_assured": is_assured,
+                            "job": job[0],
+                            "assurance_files": assurance_files_list,
+                            "certificat_files": certificate_files_list,
+                        }
+
+                    return JsonResponse({"success": True, "data": response_data}, status=200)
+                finally:
+                    connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+    
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+
+ 
