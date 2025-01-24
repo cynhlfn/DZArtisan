@@ -269,7 +269,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",  # Add your frontend origin(s) here
     "http://127.0.0.1:3000",
     "https://dzartisan-app.onrender.com",  # Add your production frontend URL
-    "onecs-project.onrender.com"
+    "https://onecs-project.onrender.com"
 ]
 
 
