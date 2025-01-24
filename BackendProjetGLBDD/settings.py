@@ -255,9 +255,9 @@ TEMPLATES = [
 
 
 # Cookie settings
-SESSION_COOKIE_SAMESITE = 'Lax'  # Use 'Lax' or 'Strict' for SameSite
+SESSION_COOKIE_SAMESITE = 'None'  # Use 'Lax' or 'Strict' for SameSite
 SESSION_COOKIE_SECURE = True  # Set to True in production with HTTPS
-CSRF_COOKIE_SAMESITE = 'Lax'  # Use 'Lax' or 'Strict' for SameSite
+CSRF_COOKIE_SAMESITE = 'None'  # Use 'Lax' or 'Strict' for SameSite
 CSRF_COOKIE_SECURE = True  # Set to True in production with HTTPS
 
 # CORS settings
