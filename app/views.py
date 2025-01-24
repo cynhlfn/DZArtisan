@@ -295,6 +295,9 @@ def user_login(request):
             request.session['is_staff'] = is_staff
 
             session_id = request.session.session_key
+
+            request.session.save()
+
             if not session_id:
                 request.session.create()  # Create session if it does not exist
                 session_id = request.session.session_key
@@ -314,7 +317,11 @@ def user_login(request):
             }
 
 
-            return JsonResponse({"success": True, "message": "Vous avez été connecté avec succès.", "data": response_data }, status=200 , headers={"Set-Cookie": f"sessionid={session_id}; HttpOnly; Max-Age=1800; SameSite=Lax"})
+            return JsonResponse({
+                "success": True,
+                "message": "Vous avez été connecté avec succès.",
+                "data": response_data
+                }, status=200)
 
         except Exception as e:
             return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
