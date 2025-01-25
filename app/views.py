@@ -343,13 +343,6 @@ def user_logout(request):
 
 @csrf_exempt
 def validate_artisan(request, artisan_id):
-    # Check if the user is authenticated via session
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
 
     if request.method == "POST":
         try:
@@ -400,14 +393,6 @@ def validate_artisan(request, artisan_id):
 
 @csrf_exempt
 def refuser_artisan(request, artisan_id):
-    # Check if the user is authenticated via session
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
-
     if request.method == "POST":
         try:
             # Query to check if the artisan exists and is not already validated
@@ -526,14 +511,6 @@ def email_taken(request):
 
 @csrf_exempt
 def admin_dashboard(request):
-    # Bypass for testing purposes
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)     
-
     try:
         connection = get_db_connection()  # Use your custom database connection
         try:
@@ -634,12 +611,6 @@ def admin_dashboard(request):
 
 @csrf_exempt
 def search_artisans_by_job(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
     if request.method == "POST":
         try:
             # Check if the request body is empty
@@ -698,12 +669,7 @@ def search_artisans_by_job(request):
 
 @csrf_exempt
 def admin_clients(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
 
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
     if request.method == "GET":
         try:
             # Get page number from query parameters
@@ -785,12 +751,6 @@ def admin_clients(request):
 
 @csrf_exempt
 def delete_client(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)
     if request.method == "POST":
         try:
             # Parse the request body to get the client ID
@@ -834,13 +794,7 @@ def delete_client(request):
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
 
 @csrf_exempt
-def admin_artisans(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
+def admin_artisans(request): 
     if request.method == "GET":
         try:
             # Get page number from query parameters
@@ -922,13 +876,7 @@ def admin_artisans(request):
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
 
 @csrf_exempt
-def delete_artisan(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour valider cet artisan."}, status=403)    
+def delete_artisan(request):  
     if request.method == "POST":
         try:
             # Parse the request body to get the artisan ID
@@ -972,10 +920,7 @@ def delete_artisan(request):
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
 
 @csrf_exempt
-def edit_password(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
-      
+def edit_password(request):      
     if request.method == "POST":
         try:
             # Check if the user is authenticated via session
@@ -1041,8 +986,6 @@ def edit_password(request):
 
 @csrf_exempt
 def edit_client_profile(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
     if request.method == "POST":
         try:
             # Get the user's ID from the session
@@ -1111,8 +1054,6 @@ def edit_client_profile(request):
 
 @csrf_exempt
 def get_client_pannier(request, idClient): 
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
 
     if request.method == "GET":
         try:
@@ -1169,8 +1110,6 @@ def get_client_pannier(request, idClient):
 
 @csrf_exempt
 def new_demand(request): 
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
 
     if request.method == "POST":
         try:
@@ -1249,8 +1188,6 @@ def new_demand(request):
 
 @csrf_exempt
 def current_demands(request, id_client):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
 
     if request.method == "GET":
         try:
@@ -1336,9 +1273,6 @@ def current_demands(request, id_client):
 
 @csrf_exempt
 def approve_offer(request, idClient, idOffer):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
-
     if request.method == "GET":
         try:
             # Database connection
@@ -1402,10 +1336,7 @@ def approve_offer(request, idClient, idOffer):
 
 
 @csrf_exempt
-def get_client_deal_tasks(request, idClient, idDeal):  
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
-    
+def get_client_deal_tasks(request, idClient, idDeal):      
     if request.method == "GET":
         try:
             # Connect to the database
@@ -1478,13 +1409,6 @@ def get_client_deal_tasks(request, idClient, idDeal):
 
 @csrf_exempt
 def edit_artisan_profile(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre profil."}, status=403)
-
-    # Ensure the user is an artisan
-    if not request.session.get('is_staff', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour modifier ce profil."}, status=403)
-
     if request.method == "POST":
         try:
             # Parse the request body
@@ -1549,12 +1473,6 @@ def edit_artisan_profile(request):
 
 @csrf_exempt
 def edit_password(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
-
-    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour modifier votre mot de passe."}, status=403)
-
     if request.method == "POST":
         try:
             # Parse the request body
@@ -1613,12 +1531,6 @@ def edit_password(request):
 
 @csrf_exempt
 def get_devis_by_job(request, job):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour voir les devis."}, status=403)
-
-    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder aux devis."}, status=403)
-
     if request.method == "GET":
         try:
             # Database connection
@@ -1671,12 +1583,6 @@ def get_devis_by_job(request, job):
 
 @csrf_exempt
 def get_one_devis(request, id):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour voir les détails du devis."}, status=403)
-
-    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder à ce devis."}, status=403)
-
     if request.method == "GET":
         try:
             # Database connection
@@ -1748,12 +1654,6 @@ def get_one_devis(request, id):
 
 @csrf_exempt
 def make_offer(request, id):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour faire une offre."}, status=403)
-
-    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour faire une offre."}, status=403)
-
     if request.method == "POST":
         try:
             # Parse the request body
@@ -1814,12 +1714,6 @@ def make_offer(request, id):
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 @csrf_exempt
 def get_artisan_deals(request, id):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour voir vos offres."}, status=403)
-
-    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder à ces données."}, status=403)
-
     if request.method == "GET":
         try:
             # Database connection
@@ -1884,12 +1778,6 @@ def get_artisan_deals(request, id):
 
 @csrf_exempt
 def get_deal_tasks(request, idArtisan, idDeal):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour accéder aux tâches."}, status=403)
-
-    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour accéder à ces données."}, status=403)
-
     if request.method == "GET":
         try:
             # Database connection
@@ -1970,12 +1858,6 @@ def get_deal_tasks(request, idArtisan, idDeal):
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 @csrf_exempt
 def edit_deal_task(request, idArtisan, idDeal):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier une tâche."}, status=403)
-
-    if not request.session.get('is_staff', False):  # Ensure the user is an artisan
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour effectuer cette action."}, status=403)
-
     if request.method == "POST":
         try:
             # Parse request body
@@ -2062,13 +1944,6 @@ def edit_deal_task(request, idArtisan, idDeal):
 
 @csrf_exempt
 def admin_demandes(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté ."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires."}, status=403)
-
     if request.method == "GET":
         try:
             page = int(request.GET.get("page", 1))
@@ -2160,13 +2035,6 @@ def admin_demandes(request):
 
 @csrf_exempt
 def admin_demande(request, id_dem):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté."}, status=403)
-
-    # Check if the user is a superuser
-    if not request.session.get('is_superuser', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires."}, status=403)
-
     if request.method == "GET":
         try:
             if id_dem:
