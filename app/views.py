@@ -2735,3 +2735,70 @@ def admin_artisans_filtered(request):
             return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
 
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+":)"
+@csrf_exempt
+def client_deals(request, id): 
+    if request.method == "GET":
+        try:
+            
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT 
+                            t.id_travail AS dealId,
+                            au.id AS artisanId,
+                            au.first_name || ' ' || au.last_name AS artisanName,
+                            dd.titre AS title,
+                            CASE 
+                                WHEN COUNT(mt.id_tache) = 0 THEN 0
+                                ELSE ROUND(100.0 * SUM(CASE WHEN mt.etat = 'fait' THEN 1 ELSE 0 END) / COUNT(mt.id_tache), 2)
+                            END AS pourcentage
+                        FROM 
+                            travail t
+                        INNER JOIN 
+                            offre o ON t.id_offre = o.id_offre
+                        INNER JOIN 
+                            demande_de_devis dd ON o.id_demande = dd.id_demande
+                        INNER JOIN 
+                            auth_user au ON o.id_artisan = au.id
+                        LEFT JOIN 
+                            Mini_Tache mt ON t.id_travail = mt.id_travail
+                        WHERE 
+                            dd.id_user = %s
+                        GROUP BY 
+                            t.id_travail, au.id, au.first_name, au.last_name, dd.titre
+                        ORDER BY 
+                            t.id_travail DESC
+                        """,
+                        [id]
+                    )
+
+                    
+                    rows = cursor.fetchall()
+
+                    
+                    deals = [
+                        {
+                            "dealId": row[0],
+                            "artisanId": row[1],
+                            "artisanName": row[2],
+                            "title": row[3],
+                            "pourcentage": float(row[4]),  # Completion percentage
+                        }
+                        for row in rows
+                    ]
+
+                
+                return JsonResponse({"deals": deals}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+
+    
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)

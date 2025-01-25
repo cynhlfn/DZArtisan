@@ -24,6 +24,7 @@ urlpatterns = [
   path("client/current-demands/<int:id_client>/", views.current_demands, name="current_demands"),
   path('client/demand/offer-approve/<int:idClient>/<int:idOffer>/', views.approve_offer, name='approve_offer'),
   path('client/deals/<int:idClient>/<int:idDeal>/', views.get_client_deal_tasks, name='get_client_deal_tasks'),
+  path("client/<int:id>/deals", views.client_deals, name="client_deals"),
   path('artisan/edit_artisan_profile/', views.edit_artisan_profile, name='edit_artisan_profile'),
   path('artisan/edit-password/', views.edit_password, name='edit_password'),
   path('artisan/devis/<str:job>/', views.get_devis_by_job, name='get_devis_by_job'),
