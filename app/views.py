@@ -573,17 +573,17 @@ def admin_dashboard(request):
                     for row in cursor.fetchall()
                 ]
 
-                # Visitors Data (Last 7 days)
+                # Visitors Data (Current Month)
                 cursor.execute(
                     """
                     SELECT DATE(date_joined) AS date, COUNT(*) AS visits
                     FROM auth_user
-                    WHERE date_joined >= %s
+                    WHERE date_joined >= %s AND date_joined < %s
                     GROUP BY DATE(date_joined)
-                    ORDER BY DATE(date_joined) DESC
-                    LIMIT 7
+                    ORDER BY DATE(date_joined) ASC
                     """,
-                    [datetime.now() - timedelta(days=7)],
+                    [datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0),  # Start of current month
+                    (datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0) + timedelta(days=32)).replace(day=1)],  # Start of next month
                 )
                 visitors = [
                     {"date": str(row[0]), "visits": row[1]}
