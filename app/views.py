@@ -1117,8 +1117,7 @@ def edit_client_profile(request):
 
 @csrf_exempt
 def get_client_pannier(request, idClient): 
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
+
 
     if request.method == "GET":
         try:
@@ -1252,32 +1251,27 @@ def new_demand(request):
 
     # If the method is not POST, return a method not allowed error
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
-
 @csrf_exempt
 def current_demands(request, id_client):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre mot de passe."}, status=403)
-
     if request.method == "GET":
         try:
             # Connect to the database
             db_connection = get_db_connection()
             try:
                 with db_connection.cursor() as cursor:
-                    # Fetch demands made by the client that do not have a deal yet
+                    # Fetch all demands made by the client
                     cursor.execute(
                         """
                         SELECT dd.id_demande, dd.titre
                         FROM demande_de_devis dd
-                        LEFT JOIN offre o ON dd.id_demande = o.id_demande
                         WHERE dd.id_user = %s
                         GROUP BY dd.id_demande, dd.titre
-                        HAVING COUNT(o.id_offre) = 0
                         """,
                         [id_client]
                     )
                     demands = cursor.fetchall()
 
+                    # If no demands exist, return an empty response
                     if not demands:
                         return JsonResponse(
                             {"demands": []}, 
@@ -2522,136 +2516,136 @@ def delete_admin_task(request, id):
             return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
 
-
 # import stripe
-# import logging
-# from django.http import JsonResponse
-# from django.views.decorators.csrf import csrf_exempt
 # import json
-# import os
+# from django.http import JsonResponse, HttpResponse
+# from django.views import View
+# from django.views.decorators.csrf import csrf_exempt
+# from django.conf import settings
+# from django.core.mail import send_mail
+# from django.db import connection
+# from django.views.generic.base import TemplateView
 
-# # Set your Stripe secret key and initialize logger
-# stripe.api_key = os.getenv("sk_test_51OyyMrP5lheqX2jkqL5s8zN6G82jGPSh9AhCEFJeof9aFnHdol5ESPOEk0RWoLvlmEVU0qiCoX1rWkL2Ku0jRkZV005fddGOig")
-# webhook_secret = os.getenv("whsec_pQzxEF42taSLjhgnXJU0n7R5bdt2V7hC")
-# logger = logging.getLogger(__name__)
+# stripe.api_key = settings.STRIPE_SECRET_KEY
 
-# @csrf_exempt
-# def create_stripe_session_for_travail(request):
-#     if request.method == "POST":
-#         try:
-#             # Parse the request body
-#             data = json.loads(request.body)
-#             travail_id = data.get("id_travail")
-#             service_title = data.get("titre", "Service Payment")
-#             service_price = data.get("price")
-#             currency = data.get("currency", "usd")
 
-#             if not travail_id or not service_price:
-#                 return JsonResponse({"error": "Missing required fields: id_travail or price"}, status=400)
+# class SuccessView(TemplateView):
+#     template_name = "success.html"
 
-#             # Verify the price in the database
-#             connection = get_db_connection()
-#             with connection.cursor() as cursor:
-#                 cursor.execute("SELECT id_travail, titre, price FROM travail WHERE id_travail = %s", [travail_id])
-#                 result = cursor.fetchone()
-#                 if not result or float(service_price) != float(result[2]):
-#                     return JsonResponse({"error": "Invalid travail ID or service price mismatch"}, status=400)
 
-#             amount_in_cents = int(float(service_price) * 100)
+# class CancelView(TemplateView):
+#     template_name = "cancel.html"
 
-#             session = stripe.checkout.Session.create(
-#                 payment_method_types=["card"],
-#                 line_items=[
-#                     {
-#                         "price_data": {
-#                             "currency": currency,
-#                             "product_data": {"name": service_title},
-#                             "unit_amount": amount_in_cents,
-#                         },
-#                         "quantity": 1,
-#                     }
-#                 ],
-#                 mode="payment",
-#                 success_url=f"https://onecs-project.onrender.com/payment/success/?id_travail={travail_id}",
-#                 cancel_url="https://onecs-project.onrender.com/payment/cancel/",
-#                 metadata={"id_travail": travail_id},
-#             )
 
-#             return JsonResponse({"url": session.url}, status=200)
-#         except Exception as e:
-#             logger.error(f"Error creating Stripe session: {e}")
-#             return JsonResponse({"error": str(e)}, status=500)
-#     return JsonResponse({"error": "Invalid request method"}, status=405)
+# class TravailLandingPageView(TemplateView):
+#     template_name = "landing.html"
 
-# @csrf_exempt
-# def payment_success(request):
-#     try:
-#         travail_id = request.GET.get("id_travail")
-#         if not travail_id:
-#             return JsonResponse({"error": "Missing travail ID"}, status=400)
-
-#         connection = get_db_connection()
+#     def get_context_data(self, **kwargs):
+#         travail_id = self.kwargs["pk"]
 #         with connection.cursor() as cursor:
-#             cursor.execute(
-#                 "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
-#             )
-#         connection.commit()
+#             cursor.execute("SELECT titre, payment_status FROM travail WHERE id_travail = %s", [travail_id])
+#             travail = cursor.fetchone()
+#             if not travail:
+#                 return {"error": "Travail not found"}
 
-#         return JsonResponse({"success": True, "message": "Payment succeeded!"}, status=200)
-#     except Exception as e:
-#         logger.error(f"Error in payment success: {e}")
-#         return JsonResponse({"error": str(e)}, status=500)
+#         context = super(TravailLandingPageView, self).get_context_data(**kwargs)
+#         context.update({
+#             "travail": {"id": travail_id, "titre": travail[0], "payment_status": travail[1]},
+#             "STRIPE_PUBLIC_KEY": settings.STRIPE_PUBLIC_KEY
+#         })
+#         return context
 
-# def payment_cancel(request):
-#     return JsonResponse({"success": False, "message": "Payment canceled."}, status=200)
+
+# class CreateCheckoutSessionView(View):
+#     def post(self, request, *args, **kwargs):
+#         travail_id = self.kwargs["pk"]
+#         YOUR_DOMAIN = "http://127.0.0.1:8000"
+
+#         with connection.cursor() as cursor:
+#             cursor.execute("SELECT titre, offered_price FROM travail INNER JOIN offre ON travail.id_offre = offre.id_offre WHERE travail.id_travail = %s", [travail_id])
+#             travail = cursor.fetchone()
+
+#         if not travail:
+#             return JsonResponse({"error": "Travail not found"}, status=404)
+
+#         titre, price = travail
+
+#         checkout_session = stripe.checkout.Session.create(
+#             payment_method_types=['card'],
+#             line_items=[{
+#                 'price_data': {
+#                     'currency': 'usd',
+#                     'unit_amount': int(price * 100),
+#                     'product_data': {'name': titre},
+#                 },
+#                 'quantity': 1,
+#             }],
+#             metadata={"travail_id": travail_id},
+#             mode='payment',
+#             success_url=YOUR_DOMAIN + '/success/',
+#             cancel_url=YOUR_DOMAIN + '/cancel/',
+#         )
+
+#         return JsonResponse({'id': checkout_session.id})
+
 
 # @csrf_exempt
 # def stripe_webhook(request):
 #     payload = request.body
-#     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+#     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+#     event = None
 
 #     try:
-#         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-#     except ValueError:
-#         logger.error("Invalid payload")
-#         return JsonResponse({"error": "Invalid payload"}, status=400)
-#     except stripe.error.SignatureVerificationError:
-#         logger.error("Invalid signature")
-#         return JsonResponse({"error": "Invalid signature"}, status=400)
+#         event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
+#     except ValueError as e:
+#         return HttpResponse(status=400)
+#     except stripe.error.SignatureVerificationError as e:
+#         return HttpResponse(status=400)
 
-#     if event["type"] == "checkout.session.completed":
-#         session = event["data"]["object"]
-#         travail_id = session["metadata"].get("id_travail")
+#     # Handle the checkout.session.completed event
+#     if event['type'] == 'checkout.session.completed':
+#         session = event['data']['object']
+#         travail_id = session["metadata"]["travail_id"]
 
-#         if travail_id:
-#             try:
-#                 connection = get_db_connection()
-#                 with connection.cursor() as cursor:
-#                     cursor.execute(
-#                         "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
-#                     )
-#                 connection.commit()
-#             except Exception as e:
-#                 logger.error(f"Error updating payment status: {e}")
-#                 return JsonResponse({"error": str(e)}, status=500)
+#         with connection.cursor() as cursor:
+#             cursor.execute("UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id])
 
-#     elif event["type"] == "payment_intent.payment_failed":
-#         payment_intent = event["data"]["object"]
-#         travail_id = payment_intent["metadata"].get("id_travail")
+#         send_mail(
+#             subject="Payment Success",
+#             message=f"Your payment for travail ID {travail_id} has been processed successfully.",
+#             recipient_list=[session["customer_details"]["email"]],
+#             from_email="admin@example.com"
+#         )
 
-#         if travail_id:
-#             try:
-#                 connection = get_db_connection()
-#                 with connection.cursor() as cursor:
-#                     cursor.execute(
-#                         "UPDATE travail SET payment_status = 'failed' WHERE id_travail = %s", [travail_id]
-#                     )
-#                 connection.commit()
-#             except Exception as e:
-#                 logger.error(f"Error updating payment status for failure: {e}")
-#                 return JsonResponse({"error": str(e)}, status=500)
+#     return HttpResponse(status=200)
 
-#     return JsonResponse({"success": True, "message": "Webhook handled successfully"}, status=200)
+
+# class StripeIntentView(View):
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             req_json = json.loads(request.body)
+#             customer = stripe.Customer.create(email=req_json['email'])
+#             travail_id = self.kwargs["pk"]
+
+#             with connection.cursor() as cursor:
+#                 cursor.execute("SELECT titre, offered_price FROM travail INNER JOIN offre ON travail.id_offre = offre.id_offre WHERE travail.id_travail = %s", [travail_id])
+#                 travail = cursor.fetchone()
+
+#             if not travail:
+#                 return JsonResponse({"error": "Travail not found"}, status=404)
+
+#             titre, price = travail
+
+#             intent = stripe.PaymentIntent.create(
+#                 amount=int(price * 100),
+#                 currency='usd',
+#                 customer=customer['id'],
+#                 metadata={"travail_id": travail_id}
+#             )
+
+#             return JsonResponse({'clientSecret': intent['client_secret']})
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)})
 
 from math import ceil
 @csrf_exempt
