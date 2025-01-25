@@ -7,88 +7,50 @@ import logging
 from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
-
 @csrf_exempt
-def chat(request, username):
-    if not request.user.is_authenticated:
-        #logger.warning("Bypassing authentication for testing purposes.")
-        #request.user = User.objects.get(username="karim") 
-        return JsonResponse({"error": "You must be logged in to perform this action."}, status=403)
-    try:
-        usersen = request.user
-        friend = None
-        user_relation_exists = False
-        messages_list = []
+def send_message(request, user_id, friend_id):
+    if request.method == "POST":
+        # Parse the request body
+        if request.content_type == "application/json":
+            data = json.loads(request.body)
+        else:
+            return JsonResponse({"error": "Invalid content type. Use JSON."}, status=400)
 
-        # Fetch the friend user
+        message_content = data.get("message")
+
+        # Validate required fields
+        if not message_content:
+            return JsonResponse({"error": "The 'message' field is required."}, status=400)
+
+        # Check if both users exist in the database
         with connection.cursor() as cursor:
-            cursor.execute("SELECT id, username FROM auth_user WHERE username = %s", [username])
-            friend_row = cursor.fetchone()
-        if not friend_row:
-            return JsonResponse({"error": "Friend not found."}, status=404)
+            cursor.execute("SELECT id FROM auth_user WHERE id = %s", [user_id])
+            sender = cursor.fetchone()
+            if not sender:
+                return JsonResponse({"error": f"Sender with ID {user_id} not found."}, status=404)
 
-        friend = {"id": friend_row[0], "username": friend_row[1]}
+            cursor.execute("SELECT id FROM auth_user WHERE id = %s", [friend_id])
+            receiver = cursor.fetchone()
+            if not receiver:
+                return JsonResponse({"error": f"Receiver with ID {friend_id} not found."}, status=404)
 
-        # Check if UserRelation exists and is accepted
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT id FROM chat_userrelation 
-                WHERE user_id = %s AND friend_id = %s AND accepted = TRUE
-                """,
-                [usersen.id, friend['id']]
-            )
-            user_relation_exists = cursor.fetchone() is not None
+        # Insert the message into the database
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO chat_messages (description, sender_name_id, receiver_name_id)
+                    VALUES (%s, %s, %s)
+                    """,
+                    [message_content, user_id, friend_id]
+                )
 
-        if not user_relation_exists:
-            return JsonResponse({"error": "You are not able to chat with this user."}, status=403)
+            return JsonResponse({"message": "Message sent successfully."}, status=201)
+        except Exception as e:
+            logger.error(f"Error sending message: {str(e)}")
+            return JsonResponse({"error": "An error occurred while sending the message."}, status=500)
 
-        # Fetch messages between users
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT description, sender_name_id, receiver_name_id, time, seen, timestamp
-                FROM chat_messages
-                WHERE (sender_name_id = %s AND receiver_name_id = %s)
-                   OR (sender_name_id = %s AND receiver_name_id = %s)
-                ORDER BY timestamp ASC
-                """,
-                [usersen.id, friend['id'], friend['id'], usersen.id]
-            )
-            for row in cursor.fetchall():
-                messages_list.append({
-                    "description": row[0],
-                    "sender_name_id": row[1],
-                    "receiver_name_id": row[2],
-                    "time": row[3],
-                    "seen": row[4],
-                    "timestamp": row[5],
-                })
-
-        # Fetch the relation key
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT relation_key FROM chat_userrelation
-                WHERE user_id = %s AND friend_id = %s AND accepted = TRUE
-                """,
-                [usersen.id, friend['id']]
-            )
-            relation = cursor.fetchone()
-        if not relation:
-            return JsonResponse({"error": "Relation not found."}, status=404)
-
-        return JsonResponse({
-            "relation_key": relation[0],
-            "messages": messages_list,
-            "curr_user": {"id": usersen.id, "username": usersen.username},
-            "friend": friend,
-        }, status=200)
-
-    except Exception as e:
-        logger.error(f"Error in chat view: {e}", exc_info=True)
-        return JsonResponse({"error": f"An error occurred: {e}"}, status=500)
-
+    return JsonResponse({"error": "Invalid request method."}, status=405)
 
 @csrf_exempt
 def message_list(request, sender=None, receiver=None):
@@ -154,3 +116,49 @@ def message_list(request, sender=None, receiver=None):
     except Exception as e:
         logger.error(f"Error in message_list view: {e}", exc_info=True)
         return JsonResponse({"error": f"An error occurred: {e}"}, status=500)
+@csrf_exempt
+def get_messages(request, user_id, friend_id):
+    if request.method == "GET":
+        try:
+            # Query the database for messages between the two users
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT 
+                        id_chat_messages AS id,
+                        description AS message,
+                        sender_name_id AS senderId,
+                        receiver_name_id AS receiverId,
+                        time,
+                        seen
+                    FROM chat_messages
+                    WHERE 
+                        (sender_name_id = %s AND receiver_name_id = %s) OR 
+                        (sender_name_id = %s AND receiver_name_id = %s)
+                    ORDER BY timestamp ASC
+                    """,
+                    [user_id, friend_id, friend_id, user_id]
+                )
+                messages = cursor.fetchall()
+
+            # Format the messages into a list of dictionaries
+            messages_list = [
+                {
+                    "id": row[0],
+                    "message": row[1],
+                    "senderId": row[2],
+                    "receiverId": row[3],
+                    "time": str(row[4]),
+                    "seen": row[5],
+                }
+                for row in messages
+            ]
+
+            # Return the list of messages
+            return JsonResponse({"messages": messages_list}, status=200)
+
+        except Exception as e:
+            logger.error(f"Error retrieving messages: {str(e)}")
+            return JsonResponse({"error": "An error occurred while retrieving messages."}, status=500)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)

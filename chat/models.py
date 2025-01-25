@@ -7,35 +7,32 @@ class UserRelation(models.Model):
         User, on_delete=models.CASCADE, related_name="user_relations"
     )
     friend = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="friend_relations", default=None
+        User, on_delete=models.CASCADE, related_name="friend_relations"
     )
     accepted = models.BooleanField(default=False)
     relation_key = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        db_table = 'chat_userrelation'  # Matches the table name created in pgAdmin
-        managed = False  # Prevent Django from managing this table
-        unique_together = ('user', 'friend')  # Ensures unique user-friend pairs
+        db_table = "chat_userrelation"
+        unique_together = ("user", "friend")
 
     def __str__(self):
         return f"{self.user.username} - {self.friend.username}"
 
-
 class Messages(models.Model):
     description = models.TextField()
     sender_name = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="sender"
+        User, on_delete=models.CASCADE, related_name="sender_messages"
     )
     receiver_name = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="receiver"
+        User, on_delete=models.CASCADE, related_name="receiver_messages"
     )
     time = models.TimeField(auto_now_add=True)
     seen = models.BooleanField(default=False)
-    timestamp = models.DateTimeField(default=timezone.now, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'chat_messages'  # Matches the table name created in pgAdmin
-        managed = False  # Prevent Django from managing this table
+        db_table = "chat_messages"
         ordering = ("timestamp",)
 
     def __str__(self):
