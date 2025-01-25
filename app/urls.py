@@ -32,6 +32,27 @@ urlpatterns = [
   path('artisan/deals/<int:id>/', views.get_artisan_deals, name='get_artisan_deals'),
   path('artisan/deals/<int:idArtisan>/<int:idDeal>/', views.get_deal_tasks, name='get_deal_tasks'),
   path('artisan/deals/<int:idArtisan>/<int:idDeal>/edit/', views.edit_deal_task, name='edit_deal_task'),
+  path('jobs/', views.get_job_names, name='get_job_names'),
+  path('artisan/profile/<int:id>/portfolio/', views.artisan_portfolio, name='artisan_portfolio'),
+  path('artisan/profile/<int:id>/portfolio/add', views.add_artisan_post, name='add_artisan_post_with_id'),
+  path('artisan/profile/portfolio/add', views.add_artisan_post, name='add_artisan_post_no_id'), ##second option
+  path('artisan/profile/<int:id>/portfolio/delete', views.delete_artisan_post, name='delete_artisan_post'),
+  path('admin/taches', views.get_admin_tasks, name='get_admin_tasks'),
+  path('admin/taches/add', views.add_admin_task, name='add_admin_task'),
+  path('admin/taches/delete/<int:id>', views.delete_admin_task, name='delete_admin_task'),
+  path('admin/logs/', views.get_admin_logs, name='get_admin_logs'),
+  path("create-payment-session/", views.create_stripe_session_for_travail, name="create_stripe_session_for_travail"),
+  path("payment/success/", views.payment_success, name="payment_success"),
+  path("payment/cancel/", views.payment_cancel, name="payment_cancel"),
+  path("stripe/webhook/", views.stripe_webhook, name="stripe_webhook"),
+
+  
+
+  
+
+
+
+
 
 
   # path('create-user/', views.create_user, name='create_user'),
