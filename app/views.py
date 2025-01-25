@@ -1134,15 +1134,12 @@ def new_demand(request):
             description = data.get("description", "").strip()
             estimated_price = data.get("estimatedPrice", None)
             image = data.get("image", None)  # Optional
+            client_id  = data.get("user_id", None)
 
             # Validate required fields
             if not title or not job or not description or estimated_price is None:
                 return JsonResponse({"success": False, "message": "Tous les champs obligatoires doivent être remplis."}, status=400)
 
-            # Ensure the user is authenticated via session
-            client_id = request.session.get('user_id')
-            if not client_id:
-                return JsonResponse({"success": False, "message": "Vous devez être connecté pour créer une demande."}, status=403)
 
             # Connect to the database
             connection = get_db_connection()
