@@ -42,12 +42,13 @@ urlpatterns = [
     path("user/", HomePage, name="home"),
     path("edit/", EditProfile, name="edit"),
     path("user/<str:username>/", userprofile, name="username"),
-    path("add_friend/", add_friend, name="add_friend"),
-    path("accept_request/", accept_request, name="accept_request"),
-    path("delete_friend/", delete_friend, name="delete_friend"),
+    path("<int:sender_id>/add_friend/", add_friend, name="add_friend"),
+    path("<int:receiver_id>/accept_friend/", accept_friend, name="accept_friend"),
+    path("chat/messages/<int:user_id>/<int:friend_id>/", get_messages, name="get_messages"),
+    path("chat/delete-friend/<int:user_id>/<int:friend_id>/", delete_friend, name="delete_friend"),
     path("search/", search, name="search"),
     # re_path(r"^.*/$", RedirectView.as_view(pattern_name="login", permanent=False)),
-    path("chat/<str:username>/", chat, name="chat"),
+    path("chat/send-message/<int:user_id>/<int:friend_id>/", send_message, name="send_message"),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
