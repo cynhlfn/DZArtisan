@@ -40,11 +40,14 @@ urlpatterns = [
   path('admin/taches', views.get_admin_tasks, name='get_admin_tasks'),
   path('admin/taches/add', views.add_admin_task, name='add_admin_task'),
   path('admin/taches/delete/<int:id>', views.delete_admin_task, name='delete_admin_task'),
-  path('admin/logs/', views.get_admin_logs, name='get_admin_logs'),
-  path("create-payment-session/", views.create_stripe_session_for_travail, name="create_stripe_session_for_travail"),
-  path("payment/success/", views.payment_success, name="payment_success"),
-  path("payment/cancel/", views.payment_cancel, name="payment_cancel"),
-  path("stripe/webhook/", views.stripe_webhook, name="stripe_webhook"),
+  #path('admin/logs/', views.get_admin_logs, name='get_admin_logs'),
+  # path("create-payment-session/", views.create_stripe_session_for_travail, name="create_stripe_session_for_travail"),
+  # path("payment/success/", views.payment_success, name="payment_success"),
+  # path("payment/cancel/", views.payment_cancel, name="payment_cancel"),
+  # path("stripe/webhook/", views.stripe_webhook, name="stripe_webhook"),
+  path('admin/clients-filtered/', views.admin_clients_filtered, name='admin_clients_filtered'),
+  path('admin/artisans-filtered/', views.admin_artisans_filtered, name='admin_artisans_filtered'),
+
 
   
 
