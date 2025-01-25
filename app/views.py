@@ -2400,132 +2400,338 @@ def delete_admin_task(request, id):
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
 
 
-import stripe
-import logging
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-import os
+# import stripe
+# import logging
+# from django.http import JsonResponse
+# from django.views.decorators.csrf import csrf_exempt
+# import json
+# import os
 
-# Set your Stripe secret key and initialize logger
-stripe.api_key = os.getenv("sk_test_51OyyMrP5lheqX2jkqL5s8zN6G82jGPSh9AhCEFJeof9aFnHdol5ESPOEk0RWoLvlmEVU0qiCoX1rWkL2Ku0jRkZV005fddGOig")
-webhook_secret = os.getenv("whsec_pQzxEF42taSLjhgnXJU0n7R5bdt2V7hC")
-logger = logging.getLogger(__name__)
+# # Set your Stripe secret key and initialize logger
+# stripe.api_key = os.getenv("sk_test_51OyyMrP5lheqX2jkqL5s8zN6G82jGPSh9AhCEFJeof9aFnHdol5ESPOEk0RWoLvlmEVU0qiCoX1rWkL2Ku0jRkZV005fddGOig")
+# webhook_secret = os.getenv("whsec_pQzxEF42taSLjhgnXJU0n7R5bdt2V7hC")
+# logger = logging.getLogger(__name__)
 
+# @csrf_exempt
+# def create_stripe_session_for_travail(request):
+#     if request.method == "POST":
+#         try:
+#             # Parse the request body
+#             data = json.loads(request.body)
+#             travail_id = data.get("id_travail")
+#             service_title = data.get("titre", "Service Payment")
+#             service_price = data.get("price")
+#             currency = data.get("currency", "usd")
+
+#             if not travail_id or not service_price:
+#                 return JsonResponse({"error": "Missing required fields: id_travail or price"}, status=400)
+
+#             # Verify the price in the database
+#             connection = get_db_connection()
+#             with connection.cursor() as cursor:
+#                 cursor.execute("SELECT id_travail, titre, price FROM travail WHERE id_travail = %s", [travail_id])
+#                 result = cursor.fetchone()
+#                 if not result or float(service_price) != float(result[2]):
+#                     return JsonResponse({"error": "Invalid travail ID or service price mismatch"}, status=400)
+
+#             amount_in_cents = int(float(service_price) * 100)
+
+#             session = stripe.checkout.Session.create(
+#                 payment_method_types=["card"],
+#                 line_items=[
+#                     {
+#                         "price_data": {
+#                             "currency": currency,
+#                             "product_data": {"name": service_title},
+#                             "unit_amount": amount_in_cents,
+#                         },
+#                         "quantity": 1,
+#                     }
+#                 ],
+#                 mode="payment",
+#                 success_url=f"https://onecs-project.onrender.com/payment/success/?id_travail={travail_id}",
+#                 cancel_url="https://onecs-project.onrender.com/payment/cancel/",
+#                 metadata={"id_travail": travail_id},
+#             )
+
+#             return JsonResponse({"url": session.url}, status=200)
+#         except Exception as e:
+#             logger.error(f"Error creating Stripe session: {e}")
+#             return JsonResponse({"error": str(e)}, status=500)
+#     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+# @csrf_exempt
+# def payment_success(request):
+#     try:
+#         travail_id = request.GET.get("id_travail")
+#         if not travail_id:
+#             return JsonResponse({"error": "Missing travail ID"}, status=400)
+
+#         connection = get_db_connection()
+#         with connection.cursor() as cursor:
+#             cursor.execute(
+#                 "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
+#             )
+#         connection.commit()
+
+#         return JsonResponse({"success": True, "message": "Payment succeeded!"}, status=200)
+#     except Exception as e:
+#         logger.error(f"Error in payment success: {e}")
+#         return JsonResponse({"error": str(e)}, status=500)
+
+# def payment_cancel(request):
+#     return JsonResponse({"success": False, "message": "Payment canceled."}, status=200)
+
+# @csrf_exempt
+# def stripe_webhook(request):
+#     payload = request.body
+#     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+
+#     try:
+#         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+#     except ValueError:
+#         logger.error("Invalid payload")
+#         return JsonResponse({"error": "Invalid payload"}, status=400)
+#     except stripe.error.SignatureVerificationError:
+#         logger.error("Invalid signature")
+#         return JsonResponse({"error": "Invalid signature"}, status=400)
+
+#     if event["type"] == "checkout.session.completed":
+#         session = event["data"]["object"]
+#         travail_id = session["metadata"].get("id_travail")
+
+#         if travail_id:
+#             try:
+#                 connection = get_db_connection()
+#                 with connection.cursor() as cursor:
+#                     cursor.execute(
+#                         "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
+#                     )
+#                 connection.commit()
+#             except Exception as e:
+#                 logger.error(f"Error updating payment status: {e}")
+#                 return JsonResponse({"error": str(e)}, status=500)
+
+#     elif event["type"] == "payment_intent.payment_failed":
+#         payment_intent = event["data"]["object"]
+#         travail_id = payment_intent["metadata"].get("id_travail")
+
+#         if travail_id:
+#             try:
+#                 connection = get_db_connection()
+#                 with connection.cursor() as cursor:
+#                     cursor.execute(
+#                         "UPDATE travail SET payment_status = 'failed' WHERE id_travail = %s", [travail_id]
+#                     )
+#                 connection.commit()
+#             except Exception as e:
+#                 logger.error(f"Error updating payment status for failure: {e}")
+#                 return JsonResponse({"error": str(e)}, status=500)
+
+#     return JsonResponse({"success": True, "message": "Webhook handled successfully"}, status=200)
+
+from math import ceil
 @csrf_exempt
-def create_stripe_session_for_travail(request):
-    if request.method == "POST":
+def admin_clients_filtered(request):
+    if request.method == "GET":
         try:
-            # Parse the request body
-            data = json.loads(request.body)
-            travail_id = data.get("id_travail")
-            service_title = data.get("titre", "Service Payment")
-            service_price = data.get("price")
-            currency = data.get("currency", "usd")
+            # Get query parameters
+            page = int(request.GET.get("page", 1))  # Default to page 1
+            name_filter = request.GET.get("name", "").strip()  # Default to empty string
+            clients_per_page = 5  # Number of clients per page
 
-            if not travail_id or not service_price:
-                return JsonResponse({"error": "Missing required fields: id_travail or price"}, status=400)
-
-            # Verify the price in the database
+            # Database connection
             connection = get_db_connection()
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT id_travail, titre, price FROM travail WHERE id_travail = %s", [travail_id])
-                result = cursor.fetchone()
-                if not result or float(service_price) != float(result[2]):
-                    return JsonResponse({"error": "Invalid travail ID or service price mismatch"}, status=400)
+            try:
+                with connection.cursor() as cursor:
+                    # Count total clients with optional name filter
+                    if name_filter:
+                        cursor.execute(
+                            """
+                            SELECT COUNT(*)
+                            FROM auth_user
+                            WHERE is_staff = FALSE AND is_superuser = FALSE
+                              AND (first_name ILIKE %s OR last_name ILIKE %s)
+                            """,
+                            [f"%{name_filter}%", f"%{name_filter}%"]
+                        )
+                    else:
+                        cursor.execute(
+                            """
+                            SELECT COUNT(*)
+                            FROM auth_user
+                            WHERE is_staff = FALSE AND is_superuser = FALSE
+                            """
+                        )
+                    total_clients = cursor.fetchone()[0]
 
-            amount_in_cents = int(float(service_price) * 100)
+                    # Calculate total pages
+                    total_pages = ceil(total_clients / clients_per_page)
 
-            session = stripe.checkout.Session.create(
-                payment_method_types=["card"],
-                line_items=[
-                    {
-                        "price_data": {
-                            "currency": currency,
-                            "product_data": {"name": service_title},
-                            "unit_amount": amount_in_cents,
-                        },
-                        "quantity": 1,
+                    # Validate page number
+                    if page < 1 or page > total_pages:
+                        return JsonResponse(
+                            {"success": False, "message": "Invalid page number."},
+                            status=400
+                        )
+
+                    # Calculate offset for pagination
+                    offset = (page - 1) * clients_per_page
+
+                    # Fetch clients with optional name filter and pagination
+                    if name_filter:
+                        cursor.execute(
+                            """
+                            SELECT first_name, last_name, id, email, phoneNumber,
+                                   CASE
+                                       WHEN pfp ILIKE '%%female%%' THEN 'Female'
+                                       WHEN pfp ILIKE '%%male%%' THEN 'Male'
+                                       ELSE 'Unknown'
+                                   END AS gender
+                            FROM auth_user
+                            WHERE is_staff = FALSE AND is_superuser = FALSE
+                              AND (first_name ILIKE %s OR last_name ILIKE %s)
+                            ORDER BY id
+                            LIMIT %s OFFSET %s
+                            """,
+                            [f"%{name_filter}%", f"%{name_filter}%", clients_per_page, offset]
+                        )
+                    else:
+                        cursor.execute(
+                            """
+                            SELECT first_name, last_name, id, email, phoneNumber,
+                                   CASE
+                                       WHEN pfp ILIKE '%%female%%' THEN 'Female'
+                                       WHEN pfp ILIKE '%%male%%' THEN 'Male'
+                                       ELSE 'Unknown'
+                                   END AS gender
+                            FROM auth_user
+                            WHERE is_staff = FALSE AND is_superuser = FALSE
+                            ORDER BY id
+                            LIMIT %s OFFSET %s
+                            """,
+                            [clients_per_page, offset]
+                        )
+
+                    # Fetch and format the results
+                    rows = cursor.fetchall()
+                    clients = [
+                        {
+                            "firstName": row[0],
+                            "lastName": row[1],
+                            "id": str(row[2]),
+                            "email": row[3],
+                            "phoneNumber": row[4],
+                            "gender": row[5]
+                        }
+                        for row in rows
+                    ]
+
+                    # Build the response with pagination
+                    response_data = {
+                        "clients": clients,
+                        "pagination": {
+                            "currentPage": page,
+                            "totalPages": total_pages,
+                            "totalClients": total_clients,
+                        }
                     }
-                ],
-                mode="payment",
-                success_url=f"https://onecs-project.onrender.com/payment/success/?id_travail={travail_id}",
-                cancel_url="https://onecs-project.onrender.com/payment/cancel/",
-                metadata={"id_travail": travail_id},
-            )
+                    return JsonResponse(response_data, status=200)
 
-            return JsonResponse({"url": session.url}, status=200)
+            finally:
+                connection.close()
+
         except Exception as e:
-            logger.error(f"Error creating Stripe session: {e}")
-            return JsonResponse({"error": str(e)}, status=500)
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
 
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 @csrf_exempt
-def payment_success(request):
-    try:
-        travail_id = request.GET.get("id_travail")
-        if not travail_id:
-            return JsonResponse({"error": "Missing travail ID"}, status=400)
+def admin_artisans_filtered(request):
+    if request.method == "GET":
+        try:
+            # Get query parameters
+            page = int(request.GET.get("page", 1))
+            name = request.GET.get("name", "").strip()
+            artisans_per_page = 5
 
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
-            )
-        connection.commit()
-
-        return JsonResponse({"success": True, "message": "Payment succeeded!"}, status=200)
-    except Exception as e:
-        logger.error(f"Error in payment success: {e}")
-        return JsonResponse({"error": str(e)}, status=500)
-
-def payment_cancel(request):
-    return JsonResponse({"success": False, "message": "Payment canceled."}, status=200)
-
-@csrf_exempt
-def stripe_webhook(request):
-    payload = request.body
-    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
-
-    try:
-        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-    except ValueError:
-        logger.error("Invalid payload")
-        return JsonResponse({"error": "Invalid payload"}, status=400)
-    except stripe.error.SignatureVerificationError:
-        logger.error("Invalid signature")
-        return JsonResponse({"error": "Invalid signature"}, status=400)
-
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        travail_id = session["metadata"].get("id_travail")
-
-        if travail_id:
+            # Connect to the database
+            connection = get_db_connection()
             try:
-                connection = get_db_connection()
                 with connection.cursor() as cursor:
-                    cursor.execute(
-                        "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
-                    )
-                connection.commit()
-            except Exception as e:
-                logger.error(f"Error updating payment status: {e}")
-                return JsonResponse({"error": str(e)}, status=500)
+                    # Base query for counting artisans
+                    count_query = """
+                        SELECT COUNT(*) 
+                        FROM auth_user 
+                        WHERE is_staff = TRUE AND is_superuser = FALSE
+                    """
+                    count_params = []
 
-    elif event["type"] == "payment_intent.payment_failed":
-        payment_intent = event["data"]["object"]
-        travail_id = payment_intent["metadata"].get("id_travail")
+                    # Add name filter to the count query if provided
+                    if name:
+                        count_query += " AND (first_name ILIKE %s OR last_name ILIKE %s)"
+                        count_params.extend([f"%{name}%", f"%{name}%"])
 
-        if travail_id:
-            try:
-                connection = get_db_connection()
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "UPDATE travail SET payment_status = 'failed' WHERE id_travail = %s", [travail_id]
-                    )
-                connection.commit()
-            except Exception as e:
-                logger.error(f"Error updating payment status for failure: {e}")
-                return JsonResponse({"error": str(e)}, status=500)
+                    cursor.execute(count_query, count_params)
+                    total_artisans = cursor.fetchone()[0]
 
-    return JsonResponse({"success": True, "message": "Webhook handled successfully"}, status=200)
+                    # Calculate total pages
+                    total_pages = ceil(total_artisans / artisans_per_page)
+                    if total_pages == 0:
+                        return JsonResponse(
+                            {"artisans": [], "pagination": {"currentPage": 1, "totalPages": 0, "totalArtisans": 0}},
+                            status=200,
+                        )
+                    if page < 1 or page > total_pages:
+                        return JsonResponse({"success": False, "message": "Invalid page number."}, status=400)
+
+                    # Base query for fetching artisans
+                    fetch_query = """
+                        SELECT first_name, last_name, id, email, phoneNumber, 
+                               CASE WHEN isCertified THEN 'Certified' ELSE 'Not Certified' END AS status
+                        FROM auth_user
+                        WHERE is_staff = TRUE AND is_superuser = FALSE
+                    """
+                    fetch_params = []
+
+                    # Add name filter to the fetch query if provided
+                    if name:
+                        fetch_query += " AND (first_name ILIKE %s OR last_name ILIKE %s)"
+                        fetch_params.extend([f"%{name}%", f"%{name}%"])
+
+                    # Add pagination to the query
+                    fetch_query += " ORDER BY id LIMIT %s OFFSET %s"
+                    fetch_params.extend([artisans_per_page, (page - 1) * artisans_per_page])
+
+                    cursor.execute(fetch_query, fetch_params)
+                    rows = cursor.fetchall()
+
+                    # Format the artisans data
+                    artisans = [
+                        {
+                            "firstName": row[0],
+                            "lastName": row[1],
+                            "id": str(row[2]),
+                            "email": row[3],
+                            "phoneNumber": row[4],
+                            "status": row[5],
+                        }
+                        for row in rows
+                    ]
+
+                    # Response with pagination metadata
+                    response_data = {
+                        "artisans": artisans,
+                        "pagination": {
+                            "currentPage": page,
+                            "totalPages": total_pages,
+                            "totalArtisans": total_artisans,
+                        },
+                    }
+                    return JsonResponse(response_data, status=200)
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
