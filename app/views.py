@@ -1038,30 +1038,27 @@ def edit_password(request):
     # Handle non-POST requests
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
-
 @csrf_exempt
 def edit_client_profile(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour valider un artisan."}, status=403)
     if request.method == "POST":
         try:
-            # Get the user's ID from the session
-            client_id = request.session.get('user_id')
-            if not client_id:
-                return JsonResponse({"success": False, "message": "Erreur de session: utilisateur non trouvé."}, status=403)
-
-            # Parse request body
+            # Parse the request body
             if not request.body:
                 return JsonResponse({"success": False, "message": "Le corps de la requête est vide."}, status=400)
 
             data = json.loads(request.body.decode("utf-8"))
 
-            # Extract fields to be updated (ignore empty or non-existent fields)
+            # Extract client ID and fields to update
+            client_id = data.get("id")
             first_name = data.get("firstName", "").strip()
             last_name = data.get("LastName", "").strip()
             phone_number = data.get("PhoneNumber", "").strip()
             email = data.get("email", "").strip()
             pfp = data.get("pfp", "").strip()  # Profile picture URL or Base64
+
+            # Validate client ID
+            if not client_id:
+                return JsonResponse({"success": False, "message": "Client ID is required."}, status=400)
 
             # Prepare fields for update
             fields_to_update = []
@@ -1079,9 +1076,12 @@ def edit_client_profile(request):
             if email:
                 fields_to_update.append("email = %s")
                 params.append(email)
+
+            pfp_updated = False
             if pfp:
                 fields_to_update.append("pfp = %s")
                 params.append(pfp)
+                pfp_updated = True
 
             # If no fields to update, return success message
             if not fields_to_update:
@@ -1099,7 +1099,13 @@ def edit_client_profile(request):
                     cursor.execute(query, params)
 
                 connection.commit()
-                return JsonResponse({"success": True, "message": "Profil mis à jour avec succès."}, status=200)
+
+                # Prepare the response
+                response = {"success": True, "message": "Profil mis à jour avec succès."}
+                if pfp_updated:
+                    response["newPfp"] = pfp
+
+                return JsonResponse(response, status=200)
             finally:
                 connection.close()
 
@@ -1475,37 +1481,30 @@ def get_client_deal_tasks(request, idClient, idDeal):
             return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
 
     return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
-
 @csrf_exempt
 def edit_artisan_profile(request):
-    if not request.session.get('is_authenticated'):
-        return JsonResponse({"success": False, "message": "Vous devez être connecté pour modifier votre profil."}, status=403)
-
-    # Ensure the user is an artisan
-    if not request.session.get('is_staff', False):
-        return JsonResponse({"success": False, "message": "Vous n'avez pas les droits nécessaires pour modifier ce profil."}, status=403)
-
     if request.method == "POST":
         try:
-            # Parse the request body
+            # Check if the request body is empty
             if not request.body:
                 return JsonResponse({"success": False, "message": "Le corps de la requête est vide."}, status=400)
 
+            # Parse the request body
             data = json.loads(request.body.decode("utf-8"))
 
-            # Extract optional fields to update
+            # Extract the artisan ID and fields to be updated
+            artisan_id = data.get("id")
             first_name = data.get("firstName", "").strip()
             last_name = data.get("LastName", "").strip()
             phone_number = data.get("PhoneNumber", "").strip()
             email = data.get("email", "").strip()
-            pfp = data.get("pfp", "").strip()  # Profile picture URL or Base64
+            new_pfp = data.get("pfp", "").strip()  # Profile picture URL or Base64
 
-            # Get artisan ID from the session
-            artisan_id = request.session.get('user_id')
+            # Validate artisan ID
             if not artisan_id:
-                return JsonResponse({"success": False, "message": "Erreur de session: artisan non trouvé."}, status=403)
+                return JsonResponse({"success": False, "message": "L'identifiant de l'artisan est requis."}, status=400)
 
-            # Build the fields to update dynamically
+            # Prepare fields for update
             fields_to_update = []
             params = []
 
@@ -1521,24 +1520,31 @@ def edit_artisan_profile(request):
             if email:
                 fields_to_update.append("email = %s")
                 params.append(email)
-            if pfp:
+            if new_pfp:
                 fields_to_update.append("pfp = %s")
-                params.append(pfp)
+                params.append(new_pfp)
 
-            # If no fields to update, return success
+            # If no fields to update, return success without changes
             if not fields_to_update:
                 return JsonResponse({"success": True, "message": "Aucune modification apportée."}, status=200)
 
-            # Update the database
+            # Build the update query
             query = f"UPDATE auth_user SET {', '.join(fields_to_update)} WHERE id = %s"
             params.append(artisan_id)
 
+            # Execute the update query in the database
             connection = get_db_connection()
             try:
                 with connection.cursor() as cursor:
                     cursor.execute(query, params)
                     connection.commit()
+
+                    # If the profile picture changed, send the new URL
+                    if new_pfp:
+                        return JsonResponse({"success": True, "message": "Profil mis à jour avec succès.", "newPfp": new_pfp}, status=200)
+
                     return JsonResponse({"success": True, "message": "Profil mis à jour avec succès."}, status=200)
+
             finally:
                 connection.close()
 
@@ -2244,4 +2250,405 @@ def admin_demande(request, id_dem):
     
     return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
 
- 
+@csrf_exempt
+def get_job_names(request):
+    if request.method == "GET":
+        try:
+            # Connect to the database
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    # Fetch all job names from the `metier` table
+                    cursor.execute("SELECT Nmetier FROM metier")
+                    jobs = cursor.fetchall()
+
+                    # Extract job names into a list
+                    job_names = [job[0] for job in jobs]
+
+                # Return the list of job names
+                return JsonResponse({"job_names": job_names}, status=200)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+@csrf_exempt
+def artisan_portfolio(request, id):
+    if request.method == "GET":
+        try:
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                # Fetch all posts for the artisan
+                cursor.execute(
+                    """
+                    SELECT 
+                        id AS id,
+                        title,
+                        picture,
+                        description
+                    FROM artisan_posts
+                    WHERE id_artisan = %s
+                    """,
+                    [id]
+                )
+                portfolio_posts = [
+                    {
+                        "id": row[0],
+                        "title": row[1],
+                        "picture": row[2],
+                        "description": row[3],
+                    }
+                    for row in cursor.fetchall()
+                ]
+
+                return JsonResponse({"posts": portfolio_posts}, status=200)
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"Une erreur s'est produite: {str(e)}"}, status=500)
+    return JsonResponse({"success": False, "message": "Méthode non autorisée."}, status=405)
+@csrf_exempt
+def add_artisan_post(request, id=None):  # `id` is optional from the URL
+    if request.method == "POST":
+        try:
+            # Parse the JSON data from the request body
+            data = json.loads(request.body.decode("utf-8"))
+
+            # Use `id` from the URL if provided, otherwise fallback to `artisanId` in the body
+            artisan_id = id or data.get("artisanId")
+            title = data.get("title")
+            picture = data.get("picture")
+            description = data.get("description")
+
+            # Validate required fields
+            if not artisan_id:
+                return JsonResponse({"success": False, "message": "Artisan ID is required."}, status=400)
+            if not all([title, picture, description]):
+                return JsonResponse({"success": False, "message": "All fields are required."}, status=400)
+
+            # Insert the new post into the database
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO artisan_posts (id_artisan, title, picture, description)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    [artisan_id, title, picture, description]
+                )
+                connection.commit()
+
+            return JsonResponse({"success": True, "message": "Post added successfully."}, status=201)
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+@csrf_exempt
+def delete_artisan_post(request, id):
+    if request.method == "POST":
+        try:
+            # Parse the JSON data from the request body
+            data = json.loads(request.body.decode("utf-8"))
+
+            # Extract the post ID
+            post_id = data.get("postId")
+
+            # Validate the post ID
+            if not post_id:
+                return JsonResponse({"success": False, "message": "Post ID is required."}, status=400)
+
+            # Delete the post from the database
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    DELETE FROM artisan_posts
+                    WHERE id = %s AND id_artisan = %s
+                    """,
+                    [post_id, id]
+                )
+                # Check if any row was deleted
+                if cursor.rowcount == 0:
+                    return JsonResponse({"success": False, "message": "Post not found or does not belong to this artisan."}, status=404)
+
+                connection.commit()
+
+            return JsonResponse({"success": True, "message": "Post deleted successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+@csrf_exempt
+def get_admin_tasks(request):
+    if request.method =="GET":
+        try:
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                # Fetch backlog tasks
+                cursor.execute(
+                    """
+                    SELECT idTache, titre, description
+                    FROM tache_admin
+                    WHERE etat = 'a_faire'
+                    """
+                )
+                backlog = [
+                    {"id": row[0], "title": row[1], "description": row[2]}
+                    for row in cursor.fetchall()
+                ]
+
+                # Fetch tasks in progress
+                cursor.execute(
+                    """
+                    SELECT idTache, titre, description
+                    FROM tache_admin
+                    WHERE etat = 'en_cours'
+                    """
+                )
+                encour = [
+                    {"id": row[0], "title": row[1], "description": row[2]}
+                    for row in cursor.fetchall()
+                ]
+
+                # Fetch completed tasks
+                cursor.execute(
+                    """
+                    SELECT idTache, titre, description
+                    FROM tache_admin
+                    WHERE etat = 'fait'
+                    """
+                )
+                terminer = [
+                    {"id": row[0], "title": row[1], "description": row[2]}
+                    for row in cursor.fetchall()
+                ]
+
+            return JsonResponse(
+                {"backlog": backlog, "encour": encour, "terminer": terminer}, status=200
+            )
+
+        except Exception as e:
+            return JsonResponse(
+                {"success": False, "message": f"An error occurred: {str(e)}"}, status=500
+            )
+    return JsonResponse(
+        {"success": False, "message": "Method not allowed."}, status=405
+    )
+
+@csrf_exempt
+def add_admin_task(request):
+    if request.method == "POST":
+        try:
+            # Parse the JSON data from the request body
+            data = json.loads(request.body.decode("utf-8"))
+
+            # Extract fields from the body
+            title = data.get("title")
+            description = data.get("description")
+            state = data.get("state")
+            admin_id = data.get("adminId")  # Add adminId to the request
+
+            # Validate required fields
+            if not all([title, description, state, admin_id]):
+                return JsonResponse({"success": False, "message": "All fields are required."}, status=400)
+
+            # Validate the state value
+            if state not in ["a_faire", "en_cours", "fait"]:
+                return JsonResponse({"success": False, "message": "Invalid state. Must be 'a_faire', 'en_cours', or 'fait'."}, status=400)
+
+            # Insert the new task into the database
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO tache_admin (titre, description, etat, id_admin)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING idTache
+                    """,
+                    [title, description, state, admin_id]
+                )
+                task_id = cursor.fetchone()[0]
+                connection.commit()
+
+            return JsonResponse({"id": task_id}, status=201)
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+@csrf_exempt
+def delete_admin_task(request, id):
+    if request.method == "POST":
+        try:
+            # Parse the JSON data from the request body
+            data = json.loads(request.body.decode("utf-8"))
+
+            # Extract the task ID from the request
+            task_id = data.get("id")
+
+            if not task_id:
+                return JsonResponse({"success": False, "message": "Task ID is required."}, status=400)
+
+            # Connect to the database
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                # Check if the task exists
+                cursor.execute(
+                    """
+                    SELECT idTache FROM tache_admin WHERE idTache = %s
+                    """,
+                    [task_id]
+                )
+                task = cursor.fetchone()
+
+                if not task:
+                    return JsonResponse({"success": False, "message": "Task not found."}, status=404)
+
+                # Delete the task
+                cursor.execute(
+                    """
+                    DELETE FROM tache_admin
+                    WHERE idTache = %s
+                    """,
+                    [task_id]
+                )
+                connection.commit()
+
+            return JsonResponse({"success": True, "message": "Task deleted successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"success": False, "message": f"An error occurred: {str(e)}"}, status=500)
+    return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+
+import stripe
+import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+import os
+
+# Set your Stripe secret key and initialize logger
+stripe.api_key = os.getenv("sk_test_51OyyMrP5lheqX2jkqL5s8zN6G82jGPSh9AhCEFJeof9aFnHdol5ESPOEk0RWoLvlmEVU0qiCoX1rWkL2Ku0jRkZV005fddGOig")
+webhook_secret = os.getenv("whsec_pQzxEF42taSLjhgnXJU0n7R5bdt2V7hC")
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+def create_stripe_session_for_travail(request):
+    if request.method == "POST":
+        try:
+            # Parse the request body
+            data = json.loads(request.body)
+            travail_id = data.get("id_travail")
+            service_title = data.get("titre", "Service Payment")
+            service_price = data.get("price")
+            currency = data.get("currency", "usd")
+
+            if not travail_id or not service_price:
+                return JsonResponse({"error": "Missing required fields: id_travail or price"}, status=400)
+
+            # Verify the price in the database
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT id_travail, titre, price FROM travail WHERE id_travail = %s", [travail_id])
+                result = cursor.fetchone()
+                if not result or float(service_price) != float(result[2]):
+                    return JsonResponse({"error": "Invalid travail ID or service price mismatch"}, status=400)
+
+            amount_in_cents = int(float(service_price) * 100)
+
+            session = stripe.checkout.Session.create(
+                payment_method_types=["card"],
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": currency,
+                            "product_data": {"name": service_title},
+                            "unit_amount": amount_in_cents,
+                        },
+                        "quantity": 1,
+                    }
+                ],
+                mode="payment",
+                success_url=f"https://onecs-project.onrender.com/payment/success/?id_travail={travail_id}",
+                cancel_url="https://onecs-project.onrender.com/payment/cancel/",
+                metadata={"id_travail": travail_id},
+            )
+
+            return JsonResponse({"url": session.url}, status=200)
+        except Exception as e:
+            logger.error(f"Error creating Stripe session: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def payment_success(request):
+    try:
+        travail_id = request.GET.get("id_travail")
+        if not travail_id:
+            return JsonResponse({"error": "Missing travail ID"}, status=400)
+
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
+            )
+        connection.commit()
+
+        return JsonResponse({"success": True, "message": "Payment succeeded!"}, status=200)
+    except Exception as e:
+        logger.error(f"Error in payment success: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+def payment_cancel(request):
+    return JsonResponse({"success": False, "message": "Payment canceled."}, status=200)
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except ValueError:
+        logger.error("Invalid payload")
+        return JsonResponse({"error": "Invalid payload"}, status=400)
+    except stripe.error.SignatureVerificationError:
+        logger.error("Invalid signature")
+        return JsonResponse({"error": "Invalid signature"}, status=400)
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        travail_id = session["metadata"].get("id_travail")
+
+        if travail_id:
+            try:
+                connection = get_db_connection()
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE travail SET payment_status = 'paid' WHERE id_travail = %s", [travail_id]
+                    )
+                connection.commit()
+            except Exception as e:
+                logger.error(f"Error updating payment status: {e}")
+                return JsonResponse({"error": str(e)}, status=500)
+
+    elif event["type"] == "payment_intent.payment_failed":
+        payment_intent = event["data"]["object"]
+        travail_id = payment_intent["metadata"].get("id_travail")
+
+        if travail_id:
+            try:
+                connection = get_db_connection()
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE travail SET payment_status = 'failed' WHERE id_travail = %s", [travail_id]
+                    )
+                connection.commit()
+            except Exception as e:
+                logger.error(f"Error updating payment status for failure: {e}")
+                return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"success": True, "message": "Webhook handled successfully"}, status=200)
