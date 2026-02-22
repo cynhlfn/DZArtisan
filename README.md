@@ -33,11 +33,10 @@ Le projet a été développé dans le cadre d'un projet académique (GL & BDD), 
 | Couche | Technologie |
 |---|---|
 | Backend | Python · Django |
-| Frontend | HTML · CSS · Django Templates |
 | Temps réel | Django Channels (WebSocket) |
-| Base de données | PostgreSQL |
+| Base de données | PostgreSQL . Neon|
 | Containerisation | Docker · Docker Compose |
-| Tests | Pytest |
+| Tests | Pytest . Postman |
 | Déploiement | Render |
 
 ---
