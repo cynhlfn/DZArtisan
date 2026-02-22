@@ -16,15 +16,15 @@ Le projet a été développé dans le cadre d'un projet académique (GL & BDD), 
 
 ## ✨ Fonctionnalités clés
 
-- 🔍 **Recherche d'artisans** par catégorie (menuisier, plombier, électricien…) et par localisation
-- 🏷️ **Filtres avancés** pour affiner les résultats selon le métier, les évaluations ou la disponibilité
-- 👤 **Profils artisans** détaillés avec description, expérience et spécialités
-- ⭐ **Système d'évaluations et d'avis** clients pour choisir en toute confiance
-- 💬 **Messagerie intégrée en temps réel** (chat) entre clients et artisans
-- 🔐 **Authentification** — inscription et connexion sécurisées (clients & artisans)
-- 🌐 **Interface multilingue** (Français / Arabe)
-- 📱 **Design responsive** adapté mobile et desktop
-- 🐳 **Déploiement Docker** avec `docker-compose`
+-  **Recherche d'artisans** par catégorie (menuisier, plombier, électricien…) et par localisation
+-  **Filtres avancés** pour affiner les résultats selon le métier, les évaluations ou la disponibilité
+-  **Profils artisans** détaillés avec description, expérience et spécialités
+-  **Système d'évaluations et d'avis** clients pour choisir en toute confiance
+-  **Messagerie intégrée en temps réel** (chat) entre clients et artisans
+-  **Authentification** — inscription et connexion sécurisées (clients & artisans)
+-  **Interface multilingue** (Français / Arabe)
+-  **Design responsive** adapté mobile et desktop
+-  **Déploiement Docker** avec `docker-compose`
 
 ---
 
