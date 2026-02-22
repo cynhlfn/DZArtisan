@@ -10,7 +10,7 @@
 
 **DZ Artisan** est une application web qui facilite la recherche et la mise en contact avec des artisans professionnels en Algérie (menuisiers, électriciens, maçons, peintres, plombiers, etc.).
 
-Le projet a été développé dans le cadre d'un projet académique (GL & BDD), avec une architecture full-stack Django, un système de messagerie en temps réel, et un déploiement containerisé via Docker.
+Le projet a été développé dans le cadre d'un projet académique (GL & BDD), avec une architecture full-stack Django, Next.js , un système de messagerie en temps réel, et un déploiement containerisé via Docker.
 
 ---
 
@@ -33,6 +33,7 @@ Le projet a été développé dans le cadre d'un projet académique (GL & BDD), 
 | Couche | Technologie |
 |---|---|
 | Backend | Python · Django |
+| Frontend | Next.js |
 | Temps réel | Django Channels (WebSocket) |
 | Base de données | PostgreSQL . Neon|
 | Containerisation | Docker · Docker Compose |
