@@ -1,6 +1,6 @@
 # 🛠️ DZ Artisan
 
-> Plateforme de mise en relation entre artisans qualifiés et clients en Algérie.
+> Plateforme de mise en relation entre artisans qualifiés et clients en Algérie .(backend de l'application)
 
 🌐 **Site en ligne :** [https://onecs-project.onrender.com/fr](https://onecs-project.onrender.com/fr)
 
